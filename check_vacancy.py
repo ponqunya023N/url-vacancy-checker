@@ -1,11 +1,14 @@
 import os
-import requests
-from bs4 import BeautifulSoup
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
 import json
 import time
+from selenium import webdriver 
+from selenium.webdriver.chrome.options import Options 
+from selenium.webdriver.common.by import By 
+from selenium.webdriver.support.ui import WebDriverWait 
+from selenium.webdriver.support import expected_conditions as EC 
 
 # --- 監視対象リスト (ここを編集してください) ---
 MONITORING_TARGETS = [
@@ -53,7 +56,7 @@ SMTP_PORT = os.environ.get('SMTP_PORT')
 SMTP_USERNAME = os.environ.get('SMTP_USERNAME')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
 FROM_EMAIL = os.environ.get('FROM_EMAIL')
-TO_EMAIL = FROM_EMAIL # 自分宛てに送る
+TO_EMAIL = FROM_EMAIL 
 
 # --- 状態管理関数 ---
 def get_current_status():
@@ -62,7 +65,6 @@ def get_current_status():
         with open('status.json', 'r') as f:
             return json.load(f).get('status')
     except (FileNotFoundError, json.JSONDecodeError):
-        # ファイルがないか、内容がおかしい場合は初期状態を返す
         return 'not_available'
 
 def update_status(new_status):
@@ -95,51 +97,60 @@ def send_alert_email(subject, body):
         print(f"🚨 エラー: メール送信中にエラーが発生しました: {e}")
         return "メール送信失敗"
 
-def check_vacancy(danchi):
-    """団地ごとの空き情報をチェックし、結果(文字列とブーリアン)を返す"""
+
+def setup_driver():
+    """Chrome WebDriverをヘッドレスモードでセットアップする"""
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    # GitHub Actions環境ではroot権限で実行するためsandboxを無効化
+    chrome_options.add_argument("--no-sandbox") 
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    # User-Agentを設定
+    chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+
+    # GitHub Actionsの環境ではWebDriverのパスが自動で設定されることを期待
+    return webdriver.Chrome(options=chrome_options)
+
+
+def check_vacancy_selenium(danchi, driver):
+    """Seleniumを使用して空き情報をチェックする (JavaScript実行後をチェック)"""
     danchi_name = danchi["danchi_name"]
     url = danchi["url"]
 
     print(f"\n--- 団地チェック開始: {danchi_name} ---")
-    print(f"🔍 対象URL: {url}")
+    print(f"🔍 対象URL (Selenium): {url}")
 
     try:
-        # User-Agentを設定し、URサイトからHTMLを取得
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        }
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
-
-        response.encoding = response.apparent_encoding 
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        # --- 最終判定ロジック (table.datalist) ---
-        # 募集物件の一覧テーブル（クラス名 datalist）が存在するかを直接チェックする
-        vacancy_table = soup.select_one('table.datalist')
+        driver.get(url)
         
-        if vacancy_table:
-            # 空きあり: 'table.datalist' の要素が存在する
+        # --- 最終判定ロジック (table.datalist) ---
+        # 空室一覧テーブル(table.datalist)の要素が出現するまで最大15秒待機する
+        # これでJavaScriptによる遅延読み込みに対応できる
+        
+        try:
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.CSS_SELECTOR, 'table.datalist'))
+            )
+            # 要素が見つかった場合
             print(f"🚨 検出: 募集物件の一覧テーブル(table.datalist)が存在します。空きが出た可能性があります！")
             return f"空きあり: {danchi_name}", True
-        else:
-            # 空きなし: テーブルが存在しない
-            print(f"✅ 検出: 募集物件の一覧テーブル(table.datalist)が存在しません。空きなし。")
+            
+        except:
+            # 15秒待っても要素が見つからなかった場合
+            print(f"✅ 検出: 募集物件の一覧テーブル(table.datalist)がタイムアウトしました。空きなし。")
             return f"空きなし: {danchi_name}", False
 
-    except requests.exceptions.HTTPError as e:
-        print(f"🚨 エラー: HTTPエラーが発生しました (ステータスコード: {response.status_code})。")
-        return f"HTTPエラー: {danchi_name}", False
-    except requests.exceptions.RequestException as e:
-        print(f"🚨 エラー: ネットワークまたはリクエストのエラーが発生しました: {e}")
-        return f"リクエストエラー: {danchi_name}", False
     except Exception as e:
-        print(f"🚨 エラー: その他の予期せぬエラーが発生しました: {e}")
-        return f"予期せぬエラー: {danchi_name}", False
+        print(f"🚨 エラー: Seleniumまたはネットワークのエラーが発生しました: {e}")
+        return f"エラー: {danchi_name}", False
 
 
 if __name__ == "__main__":
-    print(f"=== UR空き情報監視スクリプト実行開始 ({len(MONITORING_TARGETS)} 件) ===")
+    
+    # WebDriverのセットアップ
+    driver = setup_driver()
+    
+    print(f"=== UR空き情報監視スクリプト実行開始 (Selenium使用, {len(MONITORING_TARGETS)} 件) ===")
     
     current_status = get_current_status()
     print(f"⭐ 現在の通知状態 (status.json): {current_status}")
@@ -149,15 +160,18 @@ if __name__ == "__main__":
     results = []
     
     for danchi_info in MONITORING_TARGETS:
-        result_text, is_available = check_vacancy(danchi_info)
+        # Seleniumを使ったチェックを実行
+        result_text, is_available = check_vacancy_selenium(danchi_info, driver)
         results.append(result_text)
         
         if is_available:
             vacancy_detected = True
             available_danchis.append(danchi_info)
         
-        # 連続実行でGitHub Actionsをブロックしないよう、少し待機
         time.sleep(1) 
+    
+    # WebDriverを必ず閉じる
+    driver.quit()
         
     print("\n=== 全ての監視対象のチェックが完了しました ===")
     for res in results:
@@ -191,7 +205,6 @@ if __name__ == "__main__":
             update_status(new_status)
         else:
             # 状態が available -> not_available に変化した瞬間
-            # 連続通知防止のため、状態のみ更新し、通知はスキップ
             update_status(new_status)
             print("✅ '空きなし' への変化を確認しました。通知は行わず状態のみを更新します。")
     
