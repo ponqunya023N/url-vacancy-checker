@@ -169,7 +169,7 @@ if __name__ == "__main__":
         result_text, is_available = check_vacancy_selenium(danchi_info, driver)
         results.append(result_text)
         
-        time.sleep(1) # 各団地チェック間のインターバル (YMLの実行時間には大きく影響しない)
+        time.sleep(1) 
         
         if is_available:
             vacancy_detected = True
@@ -205,4 +205,8 @@ if __name__ == "__main__":
             update_status(new_status)
         else:
             update_status(new_status)
-            print("✅ '空きなし
+            print("✅ '空きなし' への変化を確認しました。通知は行わず状態のみを更新します。")
+    
+    print("\n=== 監視終了 ===")
+    
+#EOF
