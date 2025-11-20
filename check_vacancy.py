@@ -14,14 +14,41 @@ SEARCH_STRING = "空室情報"
 # --- 監視対象リスト (ここを編集してください) ---
 MONITORING_TARGETS = [
     {
-        "danchi_name": "光が丘パークタウン プロムナード十番街",
+        "danchi_name": "【S】光が丘パークタウン プロムナード十番街",
         "url": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4350.html"
     },
-    # 団地を追加する場合は、この下に辞書形式で追加してください
-    # {
-    #     "danchi_name": "新しい団地名",
-    #     "url": "新しいURL"
-    # },
+    {
+        "danchi_name": "【A】光が丘パークタウン 公園南",
+        "url": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3500.html"
+    },
+    {
+        "danchi_name": "【A】光が丘パークタウン 四季の香弐番街",
+        "url": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4100.html"
+    },
+    {
+        "danchi_name": "【B】光が丘パークタウン 大通り中央",
+        "url": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4550.html"
+    },
+    {
+        "danchi_name": "【B】光が丘パークタウン いちょう通り八番街",
+        "url": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3910.html"
+    },
+    {
+        "danchi_name": "【C】光が丘パークタウン 大通り南",
+        "url": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3690.html"
+    },
+    {
+        "danchi_name": "【D】グリーンプラザ高松",
+        "url": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4650.html"
+    },
+    {
+        "danchi_name": "【E】(赤塚)アーバンライフゆりの木通り東",
+        "url": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4590.html"
+    },
+    {
+        "danchi_name": "【F】(赤塚古い)むつみ台",
+        "url": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_2410.html"
+    },
 ]
 
 # 環境変数からSMTP設定を取得 (GitHub Secretsで設定)
