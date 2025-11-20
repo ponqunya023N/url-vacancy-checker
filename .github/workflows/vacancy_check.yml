@@ -10,7 +10,9 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
-    
+    env:                 # <--- 【重要】この行を追加
+      TZ: Asia/Tokyo     # <--- 【重要】この行を追加 (日本時間 JST に設定)
+      
     steps:
       - name: ⬇️ リポジトリのチェックアウト
         uses: actions/checkout@v4
