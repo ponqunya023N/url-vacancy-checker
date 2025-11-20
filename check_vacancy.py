@@ -54,12 +54,13 @@ FROM_EMAIL = os.environ.get('FROM_EMAIL')
 TO_EMAIL = FROM_EMAIL # 自分宛てに送る
 
 # --- 検索設定 ---
-VACANCY_STRING = '空室情報' # この文字列がページになければ空きありと判断する
+VACANCY_STRING = '空室情報'
 
 def send_alert_email(danchi_name, url):
     """空き情報が見つかった場合にメールを送信する"""
     try:
-        now_jst = datetime.now().strftime('%Y-%m-%d %H:%M:%S JST')
+        # TZ: Asia/Tokyo設定が適用される
+        now_jst = datetime.now().strftime('%Y-%m-%d %H:%M:%S JST') 
         
         msg = MIMEText(f"""
         UR賃貸に空き情報が出た可能性があります！
@@ -95,27 +96,22 @@ def check_vacancy(danchi):
     print(f"🔍 対象URL: {url}")
 
     try:
-        # User-Agentを設定し、UR側のブロックを回避しやすくする
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status() # HTTPエラーが発生した場合に例外を発生させる
+        response.raise_for_status()
 
-        # Content-Typeに基づいたエンコーディングを使用
         response.encoding = response.apparent_encoding 
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # ページ全体をテキスト化して、空室を示す文字列がないかチェック
         page_text = soup.get_text()
 
         if VACANCY_STRING not in page_text:
-            # '空室情報' が見つからなかった場合 -> 空きが出た可能性がある
             print(f"🚨 検出: 検索文字列 '{VACANCY_STRING}' が**存在しません**。空きが出た可能性があります！")
             result = send_alert_email(danchi_name, url)
             return result
         else:
-            # '空室情報' が見つかった場合 -> 空きなし
             print(f"✅ 検出: 検索文字列 '{VACANCY_STRING}' が存在します。空きなし。")
             print("✅ 実行結果: 通知スキップ")
             return "通知スキップ"
@@ -141,5 +137,3 @@ if __name__ == "__main__":
     print("\n=== 全ての監視対象のチェックが完了しました ===")
     for res in results:
         print(f"- {res}")
-    
-#EOF
