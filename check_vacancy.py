@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC 
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import TimeoutException # ★追加: TimeoutExceptionをインポート
+from selenium.common.exceptions import TimeoutException 
 
 # --- 監視対象リスト (ここを編集してください) ---
 MONITORING_TARGETS = [
@@ -131,15 +131,15 @@ def check_vacancy_selenium(danchi, driver):
         # --- 判定ロジック (WebDriverWaitを使用し、JavaScriptのロードを待つ) ---
         no_vacancy_text = "ただいま、ご紹介できるお部屋がございません。"
         
-        # 待ち時間を設定 (最大20秒)
-        wait = WebDriverWait(driver, 20)
+        # 待ち時間を設定 (最大60秒に延長)
+        wait = WebDriverWait(driver, 60)
         
         # XPathで特定のテキストを含む要素をチェック
         # contains()で部分一致でテキストを検出します
         xpath_no_vacancy = f"//*[contains(text(), '{no_vacancy_text}')]"
         
         try:
-            # 最大20秒間、「空きなし」メッセージが表示されるのを待つ
+            # 最大60秒間、「空きなし」メッセージが表示されるのを待つ
             wait.until(EC.presence_of_element_located((By.XPATH, xpath_no_vacancy)))
             
             # メッセージが検出された = 空きなし
@@ -147,7 +147,7 @@ def check_vacancy_selenium(danchi, driver):
             return f"空きなし: {danchi_name}", False
             
         except TimeoutException:
-            # 20秒待ってもメッセージが表示されない = 空きあり (これで誤判定が大幅に減るはずです)
+            # 60秒待ってもメッセージが表示されない = 空きあり 
             print(f"🚨 検出: '空きなし' メッセージがありません！空きが出た可能性があります。 (WebDriverWaitタイムアウト)")
             return f"空きあり: {danchi_name}", True
             
