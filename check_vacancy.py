@@ -125,9 +125,9 @@ def check_vacancy_selenium(danchi, driver):
         
         # --- 最終判定ロジック (table.datalist) ---
         # 空室一覧テーブル(table.datalist)の要素が出現するまで最大15秒待機する
-        # これでJavaScriptによる遅延読み込みに対応できる
         
         try:
+            # By.CSS_SELECTORを使用してtable.datalist要素の存在を待機
             WebDriverWait(driver, 15).until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, 'table.datalist'))
             )
@@ -148,7 +148,13 @@ def check_vacancy_selenium(danchi, driver):
 if __name__ == "__main__":
     
     # WebDriverのセットアップ
-    driver = setup_driver()
+    # WebDriverExceptionを防ぐため、このセットアップ前にYMLでChromiumのインストールが必須
+    try:
+        driver = setup_driver()
+    except Exception as e:
+        print(f"🚨 重大エラー: WebDriverのセットアップに失敗しました。YML設定を確認してください: {e}")
+        exit(1) # スクリプトを終了
+
     
     print(f"=== UR空き情報監視スクリプト実行開始 (Selenium使用, {len(MONITORING_TARGETS)} 件) ===")
     
