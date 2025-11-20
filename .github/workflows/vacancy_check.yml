@@ -42,4 +42,4 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
         run: |
-          python check_vacancy.pyｓ
+          python check_vacancy.py
