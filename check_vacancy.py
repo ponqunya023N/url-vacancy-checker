@@ -56,7 +56,7 @@ FROM_EMAIL = os.environ.get('FROM_EMAIL')
 TO_EMAIL = FROM_EMAIL # 自分宛てに送る
 
 # --- 検索設定 ---
-VACANCY_STRING = '空室情報' # この文字列がページになければ空きありと判断する
+VACANCY_STRING = '当サイトからすぐにご案内できるお部屋がございません' # <-- 新しい判定文字列
 
 # --- 状態管理関数 ---
 def get_current_status():
@@ -118,11 +118,11 @@ def check_vacancy(danchi):
         page_text = soup.get_text()
 
         if VACANCY_STRING not in page_text:
-            # 空きあり
+            # 空きあり: 指定文字列（空きなしを示す）が存在しない
             print(f"🚨 検出: 検索文字列 '{VACANCY_STRING}' が**存在しません**。空きが出た可能性があります！")
             return f"空きあり: {danchi_name}", True
         else:
-            # 空きなし
+            # 空きなし: 指定文字列（空きなしを示す）が存在する
             print(f"✅ 検出: 検索文字列 '{VACANCY_STRING}' が存在します。空きなし。")
             return f"空きなし: {danchi_name}", False
 
@@ -143,7 +143,6 @@ if __name__ == "__main__":
     current_status = get_current_status()
     print(f"⭐ 現在の通知状態 (status.json): {current_status}")
     
-    # 複数団地に対応するため、空きありを検出したかどうか、および空きがあった団地を保持する
     vacancy_detected = False
     available_danchis = []
     results = []
@@ -152,7 +151,6 @@ if __name__ == "__main__":
         result_text, is_available = check_vacancy(danchi_info)
         results.append(result_text)
         
-        # 1団地でも空きが検出されたらフラグと団地リストを更新
         if is_available:
             vacancy_detected = True
             available_danchis.append(danchi_info)
@@ -173,7 +171,6 @@ if __name__ == "__main__":
         # 状態が変わった場合：メール送信
         print(f"🚨 状態が変化しました ('{current_status}' -> '{new_status}')。")
         
-        # 変化後の状態に応じて通知内容を決定
         if new_status == 'available':
             # 状態が not_available -> available に変化した瞬間（空きが出た瞬間）
             
@@ -192,9 +189,8 @@ if __name__ == "__main__":
             send_alert_email(subject, body)
             update_status(new_status)
         else:
-            # 状態が available -> not_available に変化した瞬間（空きがなくなった瞬間）
-            # ご指摘の通り、現在のロジックでは空きなしの通知は不要（団地を見に行けばわかるため）
-            # status.jsonだけを更新して通知はスキップする
+            # 状態が available -> not_available に変化した瞬間
+            # 連続通知防止のため、状態のみ更新し、通知はスキップ
             update_status(new_status)
             print("✅ '空きなし' への変化を確認しました。通知は行わず状態のみを更新します。")
     
