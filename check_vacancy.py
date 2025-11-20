@@ -114,7 +114,7 @@ def setup_driver():
 
 
 def check_vacancy_selenium(danchi, driver):
-    """Seleniumを使用して空き情報をチェックする (JavaScript実行後をチェック)"""
+    """Seleniumを使用して空き情報をチェックする (空きなしメッセージの有無で判定)"""
     danchi_name = danchi["danchi_name"]
     url = danchi["url"]
 
@@ -124,23 +124,23 @@ def check_vacancy_selenium(danchi, driver):
     try:
         driver.get(url)
         
-        # --- 強制待機を導入 (JavaScriptのレンダリングを確実に待つ) ---
-        time.sleep(10) # 10秒間、強制的に待機
+        # 強制待機でJavaScriptの読み込みを保証
+        time.sleep(10)
         
-        # --- 判定ロジック ---
-        # ページソース内に table.datalist が存在するかどうかをチェック
+        # --- 判定ロジックを反転！ ---
+        # 「空きなし」メッセージが存在するかをチェック
         
-        try:
-            # 強制待機後、要素を探す
-            driver.find_element(By.CSS_SELECTOR, 'table.datalist')
-            # 要素が見つかった場合
-            print(f"🚨 検出: 募集物件の一覧テーブル(table.datalist)が存在します。空きが出た可能性があります！")
+        no_vacancy_text = "ただいま、ご紹介できるお部屋がございません。"
+        
+        if no_vacancy_text in driver.page_source:
+            # メッセージが存在する = 空きなし
+            print(f"✅ 検出: '空きなし' メッセージを確認しました。空きなし。")
+            return f"空きなし: {danchi_name}", False
+        else:
+            # メッセージが存在しない = 空きあり
+            print(f"🚨 検出: '空きなし' メッセージがありません！空きが出た可能性があります。")
             return f"空きあり: {danchi_name}", True
             
-        except:
-            # 要素が見つからなかった場合
-            print(f"✅ 検出: 募集物件の一覧テーブル(table.datalist)が見つかりませんでした。空きなし。")
-            return f"空きなし: {danchi_name}", False
 
     except Exception as e:
         print(f"🚨 エラー: Seleniumまたはネットワークのエラーが発生しました: {e}")
@@ -177,36 +177,4 @@ if __name__ == "__main__":
     
     driver.quit()
         
-    print("\n=== 全ての監視対象のチェックが完了しました ===")
-    for res in results:
-        print(f"- {res}")
-        
-    new_status = 'available' if vacancy_detected else 'not_available'
-
-    if new_status == current_status:
-        print(f"✅ 状態に変化なし ('{new_status}')。メール送信はスキップします。")
-    else:
-        print(f"🚨 状態が変化しました ('{current_status}' -> '{new_status}')。")
-        
-        if new_status == 'available':
-            subject = f"【UR空き情報アラート】🚨 空きが出ました！({len(available_danchis)}団地)"
-            body_lines = [
-                "UR賃貸に空き情報が出た可能性があります！",
-                "以下の団地を確認してください:\n"
-            ]
-            
-            for danchi in available_danchis:
-                body_lines.append(f"・【団地名】: {danchi['danchi_name']}")
-                body_lines.append(f"  【URL】: {danchi['url']}\n")
-            
-            body = "\n".join(body_lines)
-            
-            send_alert_email(subject, body)
-            update_status(new_status)
-        else:
-            update_status(new_status)
-            print("✅ '空きなし' への変化を確認しました。通知は行わず状態のみを更新します。")
-    
-    print("\n=== 監視終了 ===")
-    
-#EOF
+    print("\n=== 全ての監視対象の
