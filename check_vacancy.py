@@ -79,7 +79,7 @@ def update_status(new_status):
         print(f"🚨 エラー: 状態ファイルの書き込みに失敗しました: {e}")
 
 def send_alert_email(subject, body):
-    """空き情報が見つかった場合にメールを送信する"""
+    """空き情報が見つかった場合にメールを送信する (STARTTLS方式に修正)"""
     try:
         now_jst = datetime.now().strftime('%Y-%m-%d %H:%M:%S JST')
         
@@ -89,9 +89,12 @@ def send_alert_email(subject, body):
         msg['From'] = FROM_EMAIL
         msg['To'] = TO_EMAIL
 
-        with smtplib.SMTP_SSL(SMTP_SERVER, int(SMTP_PORT)) as server:
+        # SSLエラー[WRONG_VERSION_NUMBER]対策として、SMTP + starttls方式を使用
+        with smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT)) as server:
+            server.starttls() # ここでTLS暗号化を要求
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(msg)
+            
             print(f"✅ メールを {TO_EMAIL} に送信しました。（件名: {subject}）")
             return "通知メール送信済み"
 
@@ -124,10 +127,10 @@ def check_vacancy_selenium(danchi, driver):
     try:
         driver.get(url)
         
-        # 強制待機でJavaScriptの読み込みを保証
-        time.sleep(10)
+        # 強制待機でJavaScriptの読み込みを保証 (誤判定対策として15秒に延長)
+        time.sleep(15) 
         
-        # --- 判定ロジックを反転！ ---
+        # --- 判定ロジック ---
         # 「空きなし」メッセージが存在するかをチェック
         
         no_vacancy_text = "ただいま、ご紹介できるお部屋がございません。"
@@ -189,24 +192,4 @@ if __name__ == "__main__":
         print(f"🚨 状態が変化しました ('{current_status}' -> '{new_status}')。")
         
         if new_status == 'available':
-            subject = f"【UR空き情報アラート】🚨 空きが出ました！({len(available_danchis)}団地)"
-            body_lines = [
-                "UR賃貸に空き情報が出た可能性があります！",
-                "以下の団地を確認してください:\n"
-            ]
-            
-            for danchi in available_danchis:
-                body_lines.append(f"・【団地名】: {danchi['danchi_name']}")
-                body_lines.append(f"  【URL】: {danchi['url']}\n")
-            
-            body = "\n".join(body_lines)
-            
-            send_alert_email(subject, body)
-            update_status(new_status)
-        else:
-            update_status(new_status)
-            print("✅ '空きなし' への変化を確認しました。通知は行わず状態のみを更新します。")
-    
-    print("\n=== 監視終了 ===")
-    
-#EOF
+            subject =
