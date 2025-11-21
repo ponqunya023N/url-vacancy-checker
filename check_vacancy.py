@@ -4,14 +4,14 @@ from email.mime.text import MIMEText
 from datetime import datetime
 import json
 import time
-from selenium import webdriver 
-from selenium.webdriver.chrome.options import Options 
-from selenium.webdriver.common.by import By 
-from selenium.webdriver.support.ui import WebDriverWait 
-from selenium.webdriver.support import expected_conditions as EC 
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import TimeoutException 
+from selenium.common.exceptions import TimeoutException
 
 # --- 監視対象リスト (ここを編集してください) ---
 MONITORING_TARGETS = [
@@ -59,7 +59,7 @@ SMTP_PORT = os.environ.get('SMTP_PORT')
 SMTP_USERNAME = os.environ.get('SMTP_USERNAME')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD')
 FROM_EMAIL = os.environ.get('FROM_EMAIL')
-TO_EMAIL = FROM_EMAIL 
+TO_EMAIL = FROM_EMAIL
 
 # --- 状態管理関数 (団地ごとに管理) ---
 def get_current_status():
@@ -109,7 +109,7 @@ def setup_driver():
     """Chrome WebDriverをヘッドレスモードでセットアップする"""
     chrome_options = Options()
     chrome_options.add_argument("--headless")
-    chrome_options.add_argument("--no-sandbox") 
+    chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
 
@@ -160,7 +160,7 @@ def check_vacancy_selenium(danchi, driver):
             # ----------------------------------------------------
             
             # 空きがある場合に表示されるテーブルヘッダーのテキスト
-            vacancy_indicator_text = "募集戸数" 
+            vacancy_indicator_text = "募集戸数"
             
             if vacancy_indicator_text in driver.page_source:
                 # 募集戸数というテキストが見つかった = 空きあり
@@ -202,7 +202,7 @@ if __name__ == "__main__":
         result_text, is_available = check_vacancy_selenium(danchi_info, driver)
         results.append(result_text)
         
-        time.sleep(1) 
+        time.sleep(1)
         
         danchi_name = danchi_info['danchi_name']
         
@@ -235,10 +235,10 @@ if __name__ == "__main__":
         update_status(all_new_statuses)
     else:
         if all_new_statuses != current_statuses:
-             update_status(all_new_statuses)
-             print("✅ 団地ごとの状態が更新されましたが、新規の空き情報はありませんでした。（available -> not_available への変化など）")
+            update_status(all_new_statuses)
+            print("✅ 団地ごとの状態が更新されましたが、新規の空き情報はありませんでした。（available -> not_available への変化など）")
         else:
-             print("✅ 状態に変化なし。メール送信と状態ファイルの更新はスキップします。")
+            print("✅ 状態に変化なし。メール送信と状態ファイルの更新はスキップします。")
     
     print("\n=== 監視終了 ===")
     
