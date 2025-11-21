@@ -71,21 +71,24 @@ def send_alert_email(subject, body):
     except Exception as e:
         print(f"🚨 メール送信エラー: {e}")
 
-# --- Seleniumセットアップ (最終安定化版) ---
+# --- Seleniumセットアップ (最終安定化版: クラッシュ対策) ---
 def setup_driver():
     print("🛠️ 1/3: ブラウザオプションを設定中...")
     chrome_options = Options()
     
-    # 安定性向上のため 'old' へ変更。これで起動フリーズを解消します。
+    # 安定性向上のためのオプション群
     chrome_options.add_argument("--headless=old")
-    # GitHub Actions環境で必須の安定化オプション
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    # GPUリソース依存をなくす (安定性向上)
     chrome_options.add_argument("--disable-gpu") 
+    
+    # ★★★ 新規追加：起動クラッシュ対策 ★★★
+    chrome_options.add_argument("--remote-debugging-port=9222")
+    chrome_options.add_argument("--window-size=1920,1080") 
+    chrome_options.add_argument("--disable-extensions")
+    
     chrome_options.add_argument('user-agent=Mozilla/5.0')
     
-    # webdriver-managerを避け、固定パスを使用
     print("🛠️ 2/3: WebDriverサービスを設定中...")
     service = Service('/usr/bin/chromedriver') 
     
