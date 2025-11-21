@@ -1,32 +1,46 @@
-name: UR Vacancy Check
+name: UR Vacancy Checker
 
 on:
   schedule:
-    - cron: "0 12 * * *"  # JST 21:00 UTC
+    - cron: '*/30 * * * *' # 30分ごとに実行 (必要に応じて変更)
   workflow_dispatch:
 
+permissions:
+  contents: write # status.jsonをコミットするために書き込み権限が必要
+
 jobs:
-  check-vacancy:
+  check:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+    - name: Check out repository
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.13"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip' # パッケージインストールを高速化
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install requests beautifulsoup4
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-      - name: Run vacancy checker
-        run: python check_vacancy.py
-        env:
-          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+    - name: Run vacancy check script
+      env:
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+      run: python check_vacancy.py
+
+    # --- 【重要】状態ファイルを保存するステップ ---
+    - name: Commit and push status.json
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add status.json
+        # 変更がある場合のみコミットする（エラー回避）
+        git diff --quiet && git diff --staged --quiet || (git commit -m "Update status.json [skip ci]" && git push)
