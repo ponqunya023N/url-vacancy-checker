@@ -2,9 +2,8 @@ name: UR Vacancy Checker
 
 on:
   schedule:
-    # 毎時 0 分に実行
-    - cron: '0 * * * *'
-  workflow_dispatch: # 手動実行も可能
+    - cron: '0 * * * *' # 毎時0分に実行
+  workflow_dispatch:
 
 jobs:
   check:
@@ -38,4 +37,13 @@ jobs:
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
         run: |
-          python check_vacancy.py
+          # Pythonスクリプトを実行して結果を一時ファイルに保存
+          python check_vacancy.py > vacancy_result.txt || exit 1
+          
+          # 新規空き情報がある団地だけを出力
+          echo "=== 新規空き情報が出た団地 ==="
+          grep "空きあり" vacancy_result.txt || echo "なし"
+          
+          # ログが必要であれば全体を表示
+          echo "=== 実行ログ（全体） ==="
+          cat vacancy_result.txt
