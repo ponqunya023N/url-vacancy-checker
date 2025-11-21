@@ -1,18 +1,23 @@
 import os
 import requests
+import smtplib 
+from email.mime.text import MIMEText
+from email.header import Header
 from bs4 import BeautifulSoup
-from slack_sdk import WebClient
-from slack_sdk.errors import SlackApiError
 
-# --- 設定項目 ---
-SLACK_BOT_TOKEN = "YOUR_SLACK_BOT_TOKEN" # ご自身のSlack Bot Tokenに置き換えてください
-SLACK_CHANNEL = "#YOUR_CHANNEL_NAME"      # 通知先のチャンネル名に置き換えてください
-# Slack通知メッセージの末尾に表示されるURLです。
-# 動作確認対象の団地URLに置き換えてください。
+# --- 設定項目 (環境変数から読み込み) ---
+# 環境変数が設定されていない場合、プログラムは実行されません
+SMTP_SERVER = os.environ.get("SMTP_SERVER")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", 587))
+SMTP_USERNAME = os.environ.get("SMTP_USERNAME")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+FROM_EMAIL = os.environ.get("FROM_EMAIL") # 送信元メールアドレス
+TO_EMAIL = os.environ.get("TO_EMAIL") # 通知を受け取りたいメールアドレス
+
+# 団地URL
 UR_DANCI_URL = "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3470.html"
 
 # --- 判定セレクタ ---
-# 空きあり時にのみ存在する、部屋検索結果の親要素のID
 AVAILABLE_SELECTOR = "div#js-room-search-result" 
 
 # --- 関数定義 ---
@@ -34,7 +39,6 @@ def check_ur_availability(url, selector):
         soup = BeautifulSoup(response.content, 'html.parser')
         
         # 指定されたセレクタを持つ要素を検索
-        # find()は最初に見つかった要素を返し、見つからない場合はNoneを返します。
         is_available = soup.select_one(selector) is not None
         
         return is_available
@@ -43,42 +47,71 @@ def check_ur_availability(url, selector):
         print(f"ウェブサイトへのアクセス中にエラーが発生しました: {e}")
         return None
 
-def send_slack_notification(message):
+def send_email_notification(subject, body):
     """
-    Slackに通知を送信します。
+    メールで通知を送信します。
     """
+    # 環境変数の設定漏れがないかチェック
+    if not all([SMTP_SERVER, SMTP_USERNAME, SMTP_PASSWORD, FROM_EMAIL, TO_EMAIL]):
+        print("警告: SMTPの環境変数がすべて設定されていません。メール通知はスキップされました。")
+        return False
+
     try:
-        client = WebClient(token=SLACK_BOT_TOKEN)
+        # メッセージの作成
+        msg = MIMEText(body, 'plain', 'utf-8')
+        msg['Subject'] = Header(subject, 'utf-8')
+        msg['From'] = FROM_EMAIL
+        msg['To'] = TO_EMAIL
+
+        # SMTPサーバーへの接続とメール送信
+        with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+            server.starttls() # TLS暗号化
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.sendmail(FROM_EMAIL, [TO_EMAIL], msg.as_string())
         
-        response = client.chat_postMessage(
-            channel=SLACK_CHANNEL,
-            text=message
-        )
-        print("Slack通知を送信しました。")
-    except SlackApiError as e:
-        print(f"Slack APIエラーが発生しました: {e.response['error']}")
+        print(f"メール通知を送信しました。件名: {subject}")
+        return True
+
+    except Exception as e:
+        print(f"メール送信中にエラーが発生しました: {e}")
+        print("SMTPサーバー、ポート、ユーザー名、パスワード、受信者アドレスを確認してください。")
+        return False
 
 # --- メイン処理 ---
 
 if __name__ == "__main__":
     current_date = "2025-11-22 JST" # 現在日付を必ず明記
     
+    # TO_EMAILが未設定の場合、ここで警告を出す (ログで *** が表示されているため、今回は設定済み)
+    if not TO_EMAIL:
+        print("エラー: TO_EMAIL 環境変数が設定されていません。通知先メールアドレスを設定してください。")
+        # GitHub Actionsのログでは「失敗」と表示される
+        exit(1)
+
     # UR団地の空き状況をチェック
     is_available = check_ur_availability(UR_DANCI_URL, AVAILABLE_SELECTOR)
 
+    # メール本文と件名のベース
+    base_subject = "UR団地空き状況チェック結果"
+    
     if is_available is None:
         # アクセスエラーが発生した場合
-        slack_message = f"🚨 *UR団地の空き状況確認エラー* 🚨\n現在日付: {current_date}\n対象URL: <{UR_DANCI_URL}|UR団地ページ>\nウェブサイトへのアクセスに失敗しました。URLまたはネットワーク接続を確認してください。"
-        send_slack_notification(slack_message)
+        subject = f"🚨 ERROR: {base_subject} (アクセスエラー)"
+        body = f"現在日付: {current_date}\nUR団地ページへのアクセスに失敗しました。URLまたはネットワーク接続を確認してください。\n対象URL: {UR_DANCI_URL}"
+        send_email_notification(subject, body)
+        
     elif is_available:
         # 空きがあった場合
-        slack_message = f"✅ *空きありのお知らせ* ✅\n現在日付: {current_date}\n「空きあり」の可能性が高いです！すぐに確認してください。\n対象URL: <{UR_DANCI_URL}|UR団地ページ>"
-        send_slack_notification(slack_message)
-    else:
-        # 空きがなかった場合
-        print(f"現在、空きはありません。（{current_date}）")
-        # Slackへの通知は行わない（空きがない場合）
+        subject = f"✅ 空きあり: {base_subject}！"
+        body = f"現在日付: {current_date}\nUR団地に「空きあり」の可能性が高いです！すぐに確認してください。\n対象URL: {UR_DANCI_URL}"
+        send_email_notification(subject, body)
         
-# 根拠: 'div#js-room-search-result' の有無によって空きあり・なしを判定するロジックは、空きあり/なし両方のソースコードで有効であることが確認された。
-# 出典: 提供されたHTMLソースコードの解析および requests, beautifulsoup4, slack_sdk のドキュメント。
-# 確実性: 高
+    else:
+        # 空きがなかった場合（⭐【一時修正】テストのため、強制的にメール送信を実行します）
+        print(f"現在、空きはありません。（{current_date}）")
+
+        # ⭐【一時修正】このブロックでメール通知を実行します
+        test_subject = f"✅ TEST: {base_subject} (空きなし判定テスト)"
+        test_body = f"現在日付: {current_date}\nこのメールは、メール設定（SMTP）が正しく機能しているかを確認するためのテストです。\n空きはありませんが、通知を強制実行しました。\n対象URL: {UR_DANCI_URL}"
+        send_email_notification(test_subject, test_body)
+        # ⭐【一時修正ここまで】
