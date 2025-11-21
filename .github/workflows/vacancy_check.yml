@@ -2,7 +2,7 @@ name: UR Vacancy Checker
 
 on:
   schedule:
-    - cron: '0 * * * *' # 毎時0分に実行
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -14,36 +14,36 @@ jobs:
       - name: 📦 リポジトリのチェックアウト
         uses: actions/checkout@v4
 
+      - name: 🛠️ status.json ダウンロード (前回の状態を復元)
+        uses: actions/download-artifact@v3
+        with:
+          name: status-json
+          path: ./  # ルートにダウンロード
+
       - name: 🐍 Pythonのセットアップ
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: 🌐 Google Chrome のインストール
+      - name: 🌐 Chromeブラウザのインストール
         run: |
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
 
       - name: 📦 依存関係のインストール
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: 🛠 UR空き情報チェック実行
+      - name: 🛠️ 空き情報チェックと通知の実行
         env:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-        run: |
-          # Pythonスクリプトを実行して結果を一時ファイルに保存
-          python check_vacancy.py > vacancy_result.txt || exit 1
-          
-          # 新規空き情報がある団地だけを出力
-          echo "=== 新規空き情報が出た団地 ==="
-          grep "空きあり" vacancy_result.txt || echo "なし"
-          
-          # ログが必要であれば全体を表示
-          echo "=== 実行ログ（全体） ==="
-          cat vacancy_result.txt
+        run: python check_vacancy.py
+
+      - name: 💾 status.json をアップロード (次回のために永続化)
+        uses: actions/upload-artifact@v3
+        with:
+          name: status-json
+          path: ./status.json
