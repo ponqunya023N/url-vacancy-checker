@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, WebDriverException
 
 # --- 監視対象リスト ---
 MONITORING_TARGETS = [
@@ -35,10 +35,12 @@ FROM_EMAIL = os.environ.get('FROM_EMAIL')
 TO_EMAIL = FROM_EMAIL
 
 # --- 状態管理 ---
+STATUS_FILE = "status.json"
+
 def get_current_status():
     initial_status = {d['danchi_name']: 'not_available' for d in MONITORING_TARGETS}
     try:
-        with open('status.json', 'r') as f:
+        with open(STATUS_FILE, 'r', encoding='utf-8') as f:
             saved_status = json.load(f)
             return {name: saved_status.get(name, 'not_available') for name in initial_status}
     except (FileNotFoundError, json.JSONDecodeError):
@@ -46,11 +48,11 @@ def get_current_status():
 
 def update_status(new_statuses):
     try:
-        with open('status.json', 'w') as f:
+        with open(STATUS_FILE, 'w', encoding='utf-8') as f:
             json.dump(new_statuses, f, indent=4, ensure_ascii=False)
-        print("📄 状態ファイル(status.json)を更新しました。")
+        print(f"📄 状態ファイルを更新しました。")
     except Exception as e:
-        print(f"🚨 エラー: status.json 書き込み失敗: {e}")
+        print(f"🚨 状態ファイル書き込みエラー: {e}")
 
 def send_alert_email(subject, body):
     try:
@@ -59,79 +61,81 @@ def send_alert_email(subject, body):
         msg['Subject'] = subject
         msg['From'] = FROM_EMAIL
         msg['To'] = TO_EMAIL
+
         with smtplib.SMTP(SMTP_SERVER, int(SMTP_PORT)) as server:
             server.starttls()
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(msg)
-        print(f"✅ メール送信: {TO_EMAIL} （件名: {subject}）")
-        return True
+            print(f"✅ メール送信完了: {TO_EMAIL} （件名: {subject}）")
+            return True
     except Exception as e:
         print(f"🚨 メール送信エラー: {e}")
         return False
 
-# --- Chrome WebDriver 設定 ---
 def setup_driver():
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("window-size=1920,1080")
-    options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument(
+        'user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    )
     service = Service(ChromeDriverManager().install())
-    return webdriver.Chrome(service=service, options=options)
+    return webdriver.Chrome(service=service, options=chrome_options)
 
-# --- 空き確認 ---
 def check_vacancy(danchi, driver):
-    name, url = danchi['danchi_name'], danchi['url']
-    print(f"\n--- チェック: {name} ---\nURL: {url}")
+    name = danchi["danchi_name"]
+    url = danchi["url"]
+    print(f"\n--- チェック開始: {name} ---")
     try:
         driver.get(url)
         wait = WebDriverWait(driver, 90)
-        # メインコンテンツロード待機
+
+        # メインコンテンツのロード確認
         try:
             wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div#main-contents")))
+            print("🌐 メインコンテンツロード確認済")
         except TimeoutException:
-            print("⚠️ メインコンテンツロードタイムアウト")
-        # 空きなし判定
+            print("⚠ メインコンテンツロードタイムアウト")
+
+        # 空きなし要素の検出
         try:
             wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.list-none")))
-            print("❌ 空きなし確認")
+            print(f"✅ 空きなしを確認: {name}")
             return False
         except TimeoutException:
-            # 空きあり判定: 募集戸数テーブル
+            # 空きありページはテーブルヘッダーで判定
             if "募集戸数" in driver.page_source:
-                print("✅ 空きあり確認")
+                print(f"🚨 空きありを確認: {name}")
                 return True
             else:
-                print("❓ 不確実: 空き情報不明、空きありとして扱う")
-                return True
-    except Exception as e:
-        print(f"🚨 Selenium致命的エラー: {e}")
+                print(f"❓ 判定不確実: {name}（誤検出の可能性あり）")
+                return False
+    except WebDriverException as e:
+        print(f"🚨 Seleniumエラー: {name}: {e}")
         return False
 
-# --- メイン ---
+# --- メイン処理 ---
 if __name__ == "__main__":
     driver = setup_driver()
-    statuses = get_current_status()
-    new_statuses = statuses.copy()
+    current_status = get_current_status()
+    new_status = current_status.copy()
     newly_available = []
 
-    for d in MONITORING_TARGETS:
-        available = check_vacancy(d, driver)
-        if available:
-            new_statuses[d['danchi_name']] = 'available'
-            if statuses[d['danchi_name']] == 'not_available':
-                newly_available.append(d)
-        else:
-            new_statuses[d['danchi_name']] = 'not_available'
+    for danchi in MONITORING_TARGETS:
+        is_available = check_vacancy(danchi, driver)
+        new_status[danchi["danchi_name"]] = 'available' if is_available else 'not_available'
+        if is_available and current_status.get(danchi["danchi_name"]) == 'not_available':
+            newly_available.append(danchi)
         time.sleep(1)
 
     driver.quit()
 
-    for d in newly_available:
-        subject = f"【UR空き情報アラート】🚨 空きが出ました！ {d['danchi_name']}"
-        body = f"空き情報の可能性があります。\n\n団地名: {d['danchi_name']}\nURL: {d['url']}"
+    # メール通知
+    for danchi in newly_available:
+        subject = f"【UR空き情報アラート】🚨 空きが出ました！ {danchi['danchi_name']}"
+        body = f"団地名: {danchi['danchi_name']}\nURL: {danchi['url']}"
         send_alert_email(subject, body)
 
-    update_status(new_statuses)
-    print("=== 監視完了 ===")
+    update_status(new_status)
+    print("\n=== 監視終了 ===")
