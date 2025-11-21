@@ -2,7 +2,7 @@ name: UR Vacancy Checker
 
 on:
   schedule:
-    - cron: '0 * * * *'   # 毎時0分に実行
+    - cron: '0 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -10,31 +10,31 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Tokyo
-
     steps:
-      - name: リポジトリチェックアウト
+      - name: 📦 Checkout
         uses: actions/checkout@v4
 
-      - name: Pythonセットアップ
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Chromeインストール
-        run: sudo apt-get update && sudo apt-get install -y google-chrome-stable
+      - name: 🌐 Install Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
-      - name: 依存関係インストール
+      - name: 📦 Install requirements
         run: pip install -r requirements.txt
 
-      # --- 前回状態のダウンロード ---
-      - name: status.json ダウンロード
+      - name: ⬇️ Download previous status.json
         uses: actions/download-artifact@v4
         with:
           name: status-json
           path: ./status.json
-        continue-on-error: true  # 初回は存在しないのでエラーを無視
+        continue-on-error: true
 
-      - name: 空き情報チェック実行
+      - name: 🛠 Run Vacancy Check
         env:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
@@ -43,8 +43,7 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
         run: python check_vacancy.py
 
-      # --- 新しい状態をアップロード ---
-      - name: status.json アップロード
+      - name: ⬆️ Upload status.json
         uses: actions/upload-artifact@v4
         with:
           name: status-json
