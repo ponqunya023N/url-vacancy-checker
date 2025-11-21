@@ -1,46 +1,63 @@
+# ワークフローの名前
 name: UR Vacancy Checker
 
+# 実行トリガーの設定
+# スケジュール実行 (例: 毎日午前9時 (UTC) に実行、JSTでは午後6時)
 on:
   schedule:
-    - cron: '*/30 * * * *' # 30分ごとに実行
+    # 実行間隔を調整してください (例: '0 * * * *' なら毎時実行)
+    - cron: '0 0 * * *' 
+  # 手動実行を許可する場合
   workflow_dispatch:
 
-permissions:
-  contents: write
-
+# ジョブの定義
 jobs:
-  check:
+  check_vacancies:
     runs-on: ubuntu-latest
+    
+    # 環境変数の設定 (Pythonスクリプトから参照されます)
+    env:
+      SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+      SMTP_PORT: ${{ secrets.SMTP_PORT }}
+      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+      FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
 
     steps:
-    - name: Check out repository
-      uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-        cache: 'pip'
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        # Playwright専用のブラウザ(Chromium)をインストール
-        playwright install chromium
-
-    - name: Run vacancy check script
-      env:
-        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
-        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-        FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-      run: python check_vacancy.py
-
-    - name: Commit and push status.json
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add status.json
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Update status.json [skip ci]" && git push)
+      # 1. リポジトリのチェックアウト
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          # status.jsonをプッシュするためにトークンが必要
+          token: ${{ secrets.GITHUB_TOKEN }} 
+          
+      # 2. Pythonのセットアップ
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          
+      # 3. 依存関係のインストール (requirements.txtにplaywrightが含まれている必要があります)
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+        
+      # ⭐ 4. Playwright ブラウザのインストール (ここが追加・修正された部分です)
+      # Pythonライブラリとは別に、ブラウザの実行バイナリをセットアップします
+      - name: Install Playwright Browsers
+        run: playwright install --with-deps chromium
+        
+      # 5. 空室チェック用スクリプトの実行
+      - name: Run vacancy check script
+        run: python check_vacancy.py
+        
+      # 6. status.jsonのコミットとプッシュ (状態変化があった場合のみ)
+      # Git競合を防ぐため、fetch/pullを試みます
+      - name: Commit and push status.json
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add status.json
+          git commit -m "[Action] Update status.json [skip ci]" || echo "No changes to commit"
+          # プッシュ前にリモートの変更を取得してマージを試みる
+          git pull --rebase origin main
+          git push origin main
