@@ -4,13 +4,7 @@ from email.mime.text import MIMEText
 from datetime import datetime
 import json
 import time
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import TimeoutException
+from playwright.sync_api import sync_playwright
 
 # --- 監視対象リスト ---
 MONITORING_TARGETS = [
@@ -41,10 +35,9 @@ def get_current_status():
             saved_status = json.load(f)
             return {name: saved_status.get(name, 'not_available') for name in initial_status}
     except (FileNotFoundError, json.JSONDecodeError):
-        print("⚠ status.jsonが見つからない、または破損しているため、初期状態を使用します。")
         return initial_status
     except Exception as e:
-        print(f"🚨 状態ファイル読み込み中の予期せぬエラー: {e}")
+        print(f"🚨 状態ファイルエラー: {e}")
         return initial_status
 
 def update_status(new_statuses):
@@ -71,80 +64,45 @@ def send_alert_email(subject, body):
     except Exception as e:
         print(f"🚨 メール送信エラー: {e}")
 
-# --- Seleniumセットアップ (ブラウザパス指定・クラッシュ防止版) ---
-def setup_driver():
-    print("🛠️ 1/3: ブラウザオプションを設定中...")
-    chrome_options = Options()
-    
-    # ★★★ 修正点1: ブラウザのバイナリ場所を強制指定 ★★★
-    chrome_options.binary_location = "/usr/bin/google-chrome"
-
-    # ★★★ 修正点2: ヘッドレスモードを 'new' に戻す（最新環境対応） ★★★
-    chrome_options.add_argument("--headless=new")
-
-    # ★★★ 修正点3: 強力なクラッシュ防止オプション ★★★
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("--disable-extensions")
-    chrome_options.add_argument("--no-zygote")       # プロセス分離によるクラッシュ防止
-    chrome_options.add_argument("--single-process")  # 単一プロセスでの実行強制
-    chrome_options.add_argument("--remote-debugging-port=9222")
-    
-    chrome_options.add_argument('user-agent=Mozilla/5.0')
-    
-    print("🛠️ 2/3: WebDriverサービスを設定中 (/usr/bin/chromedriver)...")
-    service = Service('/usr/bin/chromedriver') 
-    
-    print("🛠️ 3/3: ブラウザを起動中...")
-    return webdriver.Chrome(service=service, options=chrome_options)
-
-# --- 空室チェック ---
-def check_vacancy_selenium(danchi, driver):
+# --- 空室チェック (Playwright) ---
+def check_vacancy(danchi, page):
     danchi_name = danchi["danchi_name"]
     url = danchi["url"]
     print(f"\n--- チェック開始: {danchi_name} ---")
     print(f"URL: {url}")
 
     try:
-        driver.get(url)
-        wait = WebDriverWait(driver, 60)
+        # タイムアウト60秒でアクセス
+        page.goto(url, timeout=60000)
+        
+        # ページロード待機（メインコンテンツが表示されるまで）
         try:
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div#main-contents")))
+            page.wait_for_selector("div#main-contents", timeout=60000)
             print("🌐 ページロード確認OK")
-        except TimeoutException:
+        except Exception:
             print("⚠ ページロードタイムアウト")
 
-        no_vacancy_selector = "div.list-none"
-        try:
-            wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, no_vacancy_selector)))
+        # 空きなし要素の確認 (div.list-none)
+        if page.is_visible("div.list-none"):
             print("✅ 空きなし確認")
             return f"空きなし: {danchi_name}", False
-        except TimeoutException:
-            if "募集戸数" in driver.page_source:
-                print("🚨 空きあり確認")
-                return f"空きあり: {danchi_name}", True
-            else:
-                print("❓ 空き不確実")
-                return f"空きあり: {danchi_name} (不確実)", True
+        
+        # 空きありの確認 (テキスト判定)
+        content = page.content()
+        if "募集戸数" in content:
+            print("🚨 空きあり確認")
+            return f"空きあり: {danchi_name}", True
+        else:
+            print("❓ 空き不確実")
+            return f"空きあり: {danchi_name} (不確実)", True
 
     except Exception as e:
-        print(f"🚨 Seleniumエラー: {e}")
+        print(f"🚨 エラー: {e}")
         return f"エラー: {danchi_name}", False
 
 # --- メイン ---
 if __name__ == "__main__":
-    try:
-        driver = setup_driver()
-    except Exception as e:
-        print(f"🚨 重大エラー: WebDriverセットアップ失敗: {e}")
-        # 詳細なエラー内容を表示して終了
-        import traceback
-        traceback.print_exc()
-        exit(1)
-        
-    print(f"=== UR空き情報監視開始 ({len(MONITORING_TARGETS)}件) ===")
+    print(f"=== UR空き情報監視開始 (Playwright) ({len(MONITORING_TARGETS)}件) ===")
     current_statuses = get_current_status()
     print(f"⭐ 現在ステータス: {current_statuses}")
 
@@ -152,20 +110,27 @@ if __name__ == "__main__":
     newly_available = []
     results = []
 
-    for danchi in MONITORING_TARGETS:
-        res_text, is_available = check_vacancy_selenium(danchi, driver)
-        results.append(res_text)
-        time.sleep(1)
-        name = danchi['danchi_name']
-        
-        if is_available:
-            all_new_statuses[name] = 'available'
-            if current_statuses.get(name) == 'not_available':
-                newly_available.append(danchi)
-        else:
-            all_new_statuses[name] = 'not_available'
+    # Playwrightブラウザの起動
+    with sync_playwright() as p:
+        # Chromiumをヘッドレスモードで起動
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
 
-    driver.quit()
+        for danchi in MONITORING_TARGETS:
+            res_text, is_available = check_vacancy(danchi, page)
+            results.append(res_text)
+            time.sleep(1) # マナー待機
+            
+            name = danchi['danchi_name']
+            if is_available:
+                all_new_statuses[name] = 'available'
+                if current_statuses.get(name) == 'not_available':
+                    newly_available.append(danchi)
+            else:
+                all_new_statuses[name] = 'not_available'
+        
+        browser.close()
+
     print("\n=== チェック完了 ===")
     for r in results:
         print(f"- {r}")
