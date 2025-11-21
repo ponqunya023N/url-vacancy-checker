@@ -14,11 +14,11 @@ jobs:
       - name: 📦 リポジトリのチェックアウト
         uses: actions/checkout@v4
 
-      - name: 🛠️ status.json ダウンロード (前回の状態を復元)
-        uses: actions/download-artifact@v3
+      - name: 🛠️ 前回の状態ファイルを復元
+        uses: actions/download-artifact@v4
         with:
           name: status-json
-          path: ./  # ルートにダウンロード
+          path: ./  # ルートにダウンロード。存在しない場合はスキップされる
 
       - name: 🐍 Pythonのセットアップ
         uses: actions/setup-python@v5
@@ -42,8 +42,8 @@ jobs:
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
         run: python check_vacancy.py
 
-      - name: 💾 status.json をアップロード (次回のために永続化)
-        uses: actions/upload-artifact@v3
+      - name: 💾 状態ファイルを保存 (次回ジョブ用)
+        uses: actions/upload-artifact@v4
         with:
           name: status-json
           path: ./status.json
