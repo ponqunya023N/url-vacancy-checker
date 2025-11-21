@@ -1,34 +1,32 @@
-name: UR空き情報チェック
+name: UR Vacancy Check
 
 on:
   schedule:
-    - cron: '0 10 * * *'  # 毎日 10:00 JST に実行
-  workflow_dispatch:       # 手動実行用
+    - cron: "0 12 * * *"  # JST 21:00 UTC
+  workflow_dispatch:
 
 jobs:
   check-vacancy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: リポジトリをチェックアウト
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Python 3.13 をセットアップ
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.13
+          python-version: "3.13"
 
-      - name: 依存パッケージをインストール
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          python -m pip install requests beautifulsoup4
 
-      - name: 空室チェックスクリプトを実行
+      - name: Run vacancy checker
+        run: python check_vacancy.py
         env:
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-        run: |
-          python check_vacancy.py
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
