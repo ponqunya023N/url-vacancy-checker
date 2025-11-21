@@ -2,16 +2,15 @@ name: UR Vacancy Checker
 
 on:
   schedule:
-    # 1時間ごと（毎時00分）に実行
+    # 毎時 0 分に実行
     - cron: '0 * * * *'
-  workflow_dispatch:
-    # 手動実行を可能にする
+  workflow_dispatch: # 手動実行も可能
 
 jobs:
   check:
     runs-on: ubuntu-latest
     env:
-      TZ: Asia/Tokyo # 日本時間 JST に設定
+      TZ: Asia/Tokyo
     steps:
       - name: 📦 リポジトリのチェックアウト
         uses: actions/checkout@v4
@@ -21,25 +20,22 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: 🌐 Chromeブラウザのインストール (最終安定版)
+      - name: 🌐 Google Chrome のインストール
         run: |
-          # Google Chrome (またはChromium) の安定版をインストール
           sudo apt-get update
           sudo apt-get install -y google-chrome-stable
-          
-      - name: 📦 依存関係のインストール (WebDriver Managerを含む)
+
+      - name: 📦 依存関係のインストール
         run: |
-          # requirements.txtの内容（requests, bs4, selenium, webdriver-manager）をインストール
+          pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 🛠️ 空き情報チェックと通知の実行
+      - name: 🛠 UR空き情報チェック実行
         env:
-          # SMTP情報を環境変数としてスクリプトに渡す
           SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
           SMTP_PORT: ${{ secrets.SMTP_PORT }}
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
         run: |
-          # 正しいファイル名で実行 (末尾の 's' なし)
           python check_vacancy.py
