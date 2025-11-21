@@ -1,60 +1,32 @@
-# ワークフローの名前
-name: UR Vacancy Checker
+# .github/workflows/vacancy_check.yml (想定されるファイル名)
 
-# 実行トリガーの設定
+name: Check UR Vacancy
+
 on:
   schedule:
-    # 実行間隔を調整してください (例: '0 * * * *' なら毎時実行)
+    # 毎日決まった時間に実行 (例: 9時00分 JST。UTCで 00:00 に設定)
     - cron: '0 0 * * *' 
-  # 手動実行を許可する場合
   workflow_dispatch:
 
-# ジョブの定義
 jobs:
-  check_vacancies:
+  check_vacancy:
     runs-on: ubuntu-latest
     
-    # 環境変数の設定 (Pythonスクリプトから参照されます)
-    env:
-      SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-      SMTP_PORT: ${{ secrets.SMTP_PORT }}
-      SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-      SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-      FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-
     steps:
-      # 1. リポジトリのチェックアウト
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          # status.jsonをプッシュするためにトークンが必要
-          token: ${{ secrets.GITHUB_TOKEN }} 
-          
-      # 2. Pythonのセットアップ
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-          
-      # 3. 依存関係のインストール (requirements.txtにplaywrightが含まれている必要があります)
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-        
-      # ⭐ 4. Playwright ブラウザのインストール (ご質問の行を含むステップ)
-      - name: Install Playwright Browsers
-        run: playwright install --with-deps chromium
-        
-      # 5. 空室チェック用スクリプトの実行
-      - name: Run vacancy check script
-        run: python check_vacancy.py
-        
-      # 6. status.jsonのコミットとプッシュ
-      - name: Commit and push status.json
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add status.json
-          git commit -m "[Action] Update status.json [skip ci]" || echo "No changes to commit"
-          # プッシュ前にリモートの変更を取得してマージを試みる
-          git pull --rebase origin main
-          git push origin main
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    # ⭐ 【重要】このステップを追加することで、ModuleNotFoundErrorが解消されます ⭐
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    # Pythonスクリプトの実行
+    - name: Run Vacancy Check Script
+      # Slackトークンなどを環境変数として渡す場合は env: ブロックを追加してください
+      run: python check_vacancy.py
