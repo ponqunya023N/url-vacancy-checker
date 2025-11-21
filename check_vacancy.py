@@ -10,7 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+# from webdriver_manager.chrome import ChromeDriverManager # 削除
 from selenium.common.exceptions import TimeoutException
 
 # --- 監視対象リスト ---
@@ -72,14 +72,17 @@ def send_alert_email(subject, body):
     except Exception as e:
         print(f"🚨 メール送信エラー: {e}")
 
-# --- Seleniumセットアップ ---
+# --- Seleniumセットアップ (フリーズ対策済み) ---
 def setup_driver():
     chrome_options = Options()
     chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument('user-agent=Mozilla/5.0')
-    service = Service(ChromeDriverManager().install())
+    
+    # WebDriverManagerを使わず、GitHub Actionsの標準パスを使用
+    service = Service('/usr/bin/chromedriver') 
+    
     return webdriver.Chrome(service=service, options=chrome_options)
 
 # --- 空室チェック ---
