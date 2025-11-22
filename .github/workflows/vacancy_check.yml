@@ -2,7 +2,7 @@ name: UR Vacancy Checker
 
 on:
   schedule:
-    - cron: "*/30 * * * *"  # 30分ごと
+    - cron: "0 * * * *"  # 毎時00分に実行（1時間間隔）
   workflow_dispatch:
 
 jobs:
