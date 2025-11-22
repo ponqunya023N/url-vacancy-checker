@@ -41,10 +41,14 @@ def judge_vacancy(url: str) -> str:
             if "当サイトからすぐにご案内できるお部屋がございません" in text:
                 return "not_available"
 
-        # 空室あり判定
-        rows = page.query_selector_all("tbody.rep_room tr")
-        if rows:
-            return "available"
+        # 空室あり判定（テーブルが出るまで待機）
+        try:
+            page.wait_for_selector("tbody.rep_room tr", timeout=10000)
+            rows = page.query_selector_all("tbody.rep_room tr")
+            if rows:
+                return "available"
+        except:
+            pass
 
         return "unknown"
 
