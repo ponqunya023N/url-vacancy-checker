@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       run_mode:
-        description: '実行モード (manual/scheduled)'
+        description: 'manual or scheduled'
         required: true
         default: 'scheduled'
   schedule:
-    - cron: '0 * * * *'  # 毎時00分に定期実行
+    - cron: '0 * * * *'
 
 jobs:
   vacancy-check:
@@ -24,7 +24,9 @@ jobs:
           python-version: '3.10'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          playwright install chromium
 
       - name: Run vacancy check
         env:
