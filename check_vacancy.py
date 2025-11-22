@@ -31,8 +31,9 @@ def timestamp() -> str:
 def judge_vacancy(url: str) -> str:
     """
     判定仕様:
-    - 空室あり: tbody.rep_room > tr または a.rep_room-link が存在すれば available
-    - 空室なし: 上記が存在せず、div.err-box.err-box--empty-room が「ございません」を含む場合 not_available
+    - 空室あり: tbody.rep_room > tr が存在すれば available
+                 または a.rep_room-link が存在すれば available
+    - 空室なし: div.err-box.err-box--empty-room が「ございません」を含む場合 not_available
     - 上記のどちらでも確定できない場合: unknown
     """
     with sync_playwright() as p:
@@ -42,9 +43,9 @@ def judge_vacancy(url: str) -> str:
         page.wait_for_timeout(5000)  # JS描画待ち
 
         # 空室あり判定を最優先
-        rows = page.query_selector_all("tbody.rep_room tr")
-        links = page.query_selector_all("a.rep_room-link")
-        if (rows and len(rows) > 0) or (links and len(links) > 0):
+        if page.query_selector("tbody.rep_room tr"):
+            return "available"
+        if page.query_selector("a.rep_room-link"):
             return "available"
 
         # 空室なし判定
