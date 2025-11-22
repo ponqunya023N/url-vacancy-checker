@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from playwright.sync_api import sync_playwright
 
 # 仕様: RUN_MODE は "manual" / "scheduled" を取り、デフォルトは "scheduled"
-RUN_MODE = os.getenv("RUN_MODE", "scheduled").lower()
+RUN_MODE = os.getenv("RUN_MODE", "manual").lower()
 
 # 仕様: JST ログ、status.json に状態を保存
 JST = timezone(timedelta(hours=9))
