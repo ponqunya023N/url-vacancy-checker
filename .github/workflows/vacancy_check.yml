@@ -1,36 +1,58 @@
-# .github/workflows/vacancy_check.yml (メール通知版)
-
-name: Check UR Vacancy
+name: UR Vacancy Checker
 
 on:
   schedule:
-    - cron: '0 0 * * *' 
+    - cron: "*/30 * * * *"  # 30分ごと
   workflow_dispatch:
 
 jobs:
-  check_vacancy:
+  run-checker:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
+      # status.json を Artifact から復元
+      - name: Restore status.json
+        uses: actions/download-artifact@v4
+        with:
+          name: status-file
+          path: .
+        continue-on-error: true
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-    
-    # ⭐【重要】ここでGitHub Secretsから環境変数として値を渡します ⭐
-    - name: Run Vacancy Check Script
-      run: python check_vacancy.py
-      env:
-        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
-        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
-        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-        FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
-        TO_EMAIL: ${{ secrets.TO_EMAIL }} # ⭐ 忘れずに TO_EMAIL を追加
+      - name: Ensure status.json exists
+        run: |
+          if [ ! -f status.json ]; then
+            echo "{}" > status.json
+          fi
+          echo "---- status.json preview ----"
+          head -n 20 status.json || true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run checker
+        env:
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          MAIL_TO: ${{ secrets.MAIL_TO }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+        run: python check_vacancy.py
+
+      # Artifact へ再保存
+      - name: Upload status.json
+        uses: actions/upload-artifact@v4
+        with:
+          name: status-file
+          path: status.json
+          retention-days: 30
