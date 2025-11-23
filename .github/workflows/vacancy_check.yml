@@ -1,9 +1,12 @@
 name: URL Vacancy Checker
 
 on:
-  workflow_dispatch:   # 手動実行（今すぐ初回を走らせる）
+  workflow_dispatch:
   schedule:
-    - cron: '*/1 * * * *'   # 毎分実行（テスト用、3回連続で走る）
+    - cron: '*/5 * * * *'   # テスト用: 5分ごとに実行
+
+permissions:
+  contents: write   # リポジトリへの書き込み権限を付与
 
 jobs:
   vacancy-check:
@@ -12,6 +15,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -24,20 +29,13 @@ jobs:
       - name: Install browsers
         run: playwright install --with-deps
 
-      - name: Download status.json artifact if exists
-        uses: actions/download-artifact@v4
-        with:
-          name: status-file
-          path: .
-        continue-on-error: true
-
       - name: Ensure status.json exists
         run: |
           if [ ! -f status.json ]; then
             echo '{}' > status.json
             echo "Created default status.json"
           else
-            echo "status.json restored from artifact"
+            echo "status.json loaded from repo"
           fi
 
       - name: Run vacancy check
@@ -50,8 +48,10 @@ jobs:
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
 
-      - name: Upload status.json
-        uses: actions/upload-artifact@v4
-        with:
-          name: status-file
-          path: status.json
+      - name: Commit status.json
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add status.json
+          git commit -m "Update status.json" || echo "No changes to commit"
+          git push
