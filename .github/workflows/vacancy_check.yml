@@ -16,10 +16,14 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.x'
+          # Python 3.11 を明示的に指定（greenlet が対応済み）
+          python-version: '3.11'
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Install browsers
+        run: playwright install --with-deps
 
       # 前回の status.json を復元
       - name: Download status.json
