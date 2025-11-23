@@ -1,14 +1,9 @@
 name: URL Vacancy Checker
 
 on:
-  workflow_dispatch:   # 手動実行も可能
+  workflow_dispatch:   # 手動実行（今すぐ初回を走らせる）
   schedule:
-    # 1回目 → 毎時00分
-    - cron: '0 * * * *'
-    # 2回目 → 毎時01分
-    - cron: '1 * * * *'
-    # 3回目 → 毎時02分
-    - cron: '2 * * * *'
+    - cron: '*/1 * * * *'   # 毎分実行（テスト用、3回連続で走る）
 
 jobs:
   vacancy-check:
