@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          # Python 3.11 を明示的に指定（greenlet が対応済み）
+          # greenlet/playwright が安定して動くバージョンに固定
           python-version: '3.11'
 
       - name: Install dependencies
@@ -25,12 +25,23 @@ jobs:
       - name: Install browsers
         run: playwright install --with-deps
 
-      # 前回の status.json を復元
-      - name: Download status.json
+      # 初回は Artifact が存在しないため、ダウンロード失敗を許容する
+      - name: Download status.json artifact if exists
         uses: actions/download-artifact@v4
         with:
           name: status-file
           path: .
+        continue-on-error: true
+
+      # Artifact が無い場合でも後続が動けるようにダミー作成
+      - name: Ensure status.json exists
+        run: |
+          if [ ! -f status.json ]; then
+            echo '{}' > status.json
+            echo "Created default status.json"
+          else
+            echo "status.json restored from artifact"
+          fi
 
       - name: Run vacancy check
         run: python check_vacancy.py
@@ -42,9 +53,11 @@ jobs:
           SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
           SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
 
-      # 今回の status.json を保存
+      # 次回実行のために status.json を Artifact として保存
       - name: Upload status.json
         uses: actions/upload-artifact@v4
         with:
           name: status-file
           path: status.json
+          # 必要なら保持期間を指定（省略可）
+          # retention-days: 30
