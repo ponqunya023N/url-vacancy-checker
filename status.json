@@ -1,13 +1,13 @@
 {
-  "【S】光が丘パークタウン プロムナード十番街": "available",
+  "【S】光が丘パークタウン プロムナード十番街": "not_available",
   "【A】光が丘パークタウン 公園南": "not_available",
   "【A】光が丘パークタウン 四季の香弐番街": "not_available",
-  "【B】光が丘パークタウン 大通り中央": "available",
+  "【B】光が丘パークタウン 大通り中央": "not_available",
   "【B】光が丘パークタウン いちょう通り八番街": "not_available",
   "【C】光が丘パークタウン 大通り南": "not_available",
   "【D】(赤塚)アーバンライフゆりの木通り東": "not_available",
   "【D】(赤塚)光が丘パークタウン ゆりの木通り３３番街": "not_available",
   "【E】(赤塚古い)むつみ台": "not_available",
   "【E】(赤塚古い)光が丘パークタウン ゆりの木通り北": "not_available",
-  "【E】(遠い古い)グリーンプラザ高松": "available"
+  "【E】(遠い古い)グリーンプラザ高松": "not_available"
 }
