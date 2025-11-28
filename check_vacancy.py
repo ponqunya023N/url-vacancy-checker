@@ -109,15 +109,16 @@ def main() -> None:
     current = check_targets()
 
     # 差分通知（前回 not_available → 今回 available）
-    new_vacancies = [
-        (n, TARGETS[n], prev.get(n, "not_available"), s)
-        for n, s in current.items()
-        if prev.get(n, "not_available") == "not_available" and s == "available"
-    ]
-    for name, url, prev_state, current_state in new_vacancies:
-        send_mail(name, url, prev_state, current_state)
+    for n, s in current.items():
+        prev_state = prev.get(n, "not_available")
+        notify = (prev_state == "not_available" and s == "available")
+        # ログ追加: 前回・今回・通知可否を出力
+        print(f"[{timestamp()}] {n} | prev={prev_state} current={s} notify={'yes' if notify else 'no'}")
+        if notify:
+            send_mail(n, TARGETS[n], prev_state, s)
 
     save_status(current)
+    print(f"[{timestamp()}] status.json saved")
 
 if __name__ == "__main__":
     main()
