@@ -3,7 +3,7 @@ name: URL Vacancy Checker
 on:
   workflow_dispatch:        # 手動実行
   schedule:
-    - cron: '* * * * *'  # 1分ごとに実行
+    - cron: '*/3 * * * *'  # 3分ごとに実行（GitHubの混雑状況により遅延あり）
 
 permissions:
   contents: write           # リポジトリへの書き込み権限を付与
@@ -24,7 +24,9 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright==1.49.0
 
       - name: Install browsers
         run: playwright install --with-deps
@@ -45,5 +47,5 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
           git add status.json
-          git commit -m "Update status.json" || echo "No changes to commit"
+          git commit -m "Update status.json [skip ci]" || echo "No changes to commit"
           git push
