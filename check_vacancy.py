@@ -1,130 +1,51 @@
-#!/usr/bin/env python3
-# -- coding: utf-8 --
+name: URL Vacancy Checker
 
-import os
-import json
-import smtplib
-from email.mime.text import MIMEText
-from datetime import datetime, timedelta, timezone
-from playwright.sync_api import sync_playwright
+on:
+  workflow_dispatch:        # 手動実行
+  schedule:
+    - cron: '*/3 * * * *'  # 3分ごとに実行（GitHubの混雑状況により遅延あり）
 
-# タイムゾーン／状態ファイル
-JST = timezone(timedelta(hours=9))
-STATUS_FILE = "status.json"
+permissions:
+  contents: write           # リポジトリへの書き込み権限を付与
 
-# 監視対象（名前→URL）
-TARGETS = {
-    "【S/A】光が丘パークタウン プロムナード十番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4350.html",
-    "【A/C】光が丘パークタウン 公園南": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3500.html",
-    "【A/B】光が丘パークタウン 四季の香弐番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4100.html",
-    "【A/A】光が丘パークタウン 大通り中央": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4550.html",
-    "【B/B】光が丘パークタウン いちょう通り八番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3910.html",
-    "【C/B】光が丘パークタウン 大通り南": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3690.html",
-    "【D/A】(赤塚)アーバンライフゆりの木通り東": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4590.html",
-    "【D/C】(赤塚)光が丘パークタウン ゆりの木通り３３番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_6801.html",
-    "【D/D】(赤塚)むつみ台": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_2410.html",
-    "【D/C】(赤塚)光が丘パークタウン ゆりの木通り北": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3470.html",
-    "【E/A】(遠い)グリーンプラザ高松": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4650.html",
-}
+jobs:
+  vacancy-check:
+    runs-on: ubuntu-latest
 
-def timestamp() -> str:
-    return datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
-def judge_vacancy(url: str) -> str:
-    """
-    空室判定ロジック（冗長化）:
-    - 空室あり (available) 条件:
-      1) tbody.rep_room > tr が存在
-      2) a.rep_room-link が存在
-      3) table.rep_room に tr が存在
-      4) .rep_room 内に tr/td が存在
-    - 空室なし (not_available):
-      div.err-box.err-box--empty-room のテキストに「ございません」等を含む
-    - 上記いずれでも確定不可なら unknown
-    """
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        page = browser.new_page()
-        page.goto(url, timeout=30000)
-        page.wait_for_timeout(5000)
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-        if page.query_selector("tbody.rep_room tr"):
-            return "available"
-        if page.query_selector("a.rep_room-link"):
-            return "available"
-        rows = page.query_selector_all("table.rep_room tr")
-        if rows and len(rows) > 0:
-            return "available"
-        if page.query_selector(".rep_room tr") or page.query_selector(".rep_room td"):
-            return "available"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright==1.49.0
 
-        empty_box = page.query_selector("div.err-box.err-box--empty-room")
-        if empty_box:
-            text = (empty_box.inner_text() or "").strip()
-            if ("ございません" in text) or ("ご案内できるお部屋がございません" in text):
-                return "not_available"
+      - name: Install browsers
+        run: playwright install --with-deps
 
-        return "unknown"
+      - name: Run vacancy check
+        run: python check_vacancy.py
+        env:
+          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
 
-def check_targets() -> dict:
-    results = {}
-    for name, url in TARGETS.items():
-        status = judge_vacancy(url)
-        print(f"[{timestamp()}] {name}: {status}")
-        results[name] = status
-    return results
-
-def load_status() -> dict:
-    if os.path.exists(STATUS_FILE):
-        with open(STATUS_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    # status.json が存在しない場合は全物件 not_available とみなす
-    return {name: "not_available" for name in TARGETS.keys()}
-
-def save_status(status: dict) -> None:
-    with open(STATUS_FILE, "w", encoding="utf-8") as f:
-        json.dump(status, f, ensure_ascii=False, indent=2)
-
-def send_mail(name: str, url: str, prev_state: str, current_state: str) -> None:
-    subject = f"UR空き{name}"
-    body = (
-        f"{name}\n"
-        f"{url}\n"
-        f"判定結果: 前回 {prev_state} → 今回 {current_state}\n"
-        f"解析日時: {timestamp()}"
-    )
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = os.getenv("FROM_EMAIL")
-    msg["To"] = os.getenv("TO_EMAIL")
-
-    with smtplib.SMTP(os.getenv("SMTP_SERVER"), int(os.getenv("SMTP_PORT"))) as server:
-        server.starttls()
-        server.login(os.getenv("SMTP_USERNAME"), os.getenv("SMTP_PASSWORD"))
-        server.send_message(msg)
-    print(f"[{timestamp()}] メール送信完了: {subject} | 前回 {prev_state} → 今回 {current_state}")
-
-def main() -> None:
-    prev = load_status()
-    current = check_targets()
-
-    # 手動実行かどうかを環境変数で判定
-    manual_run = os.getenv("MANUAL_RUN") == "true"
-
-    for n, s in current.items():
-        if manual_run:
-            # 手動実行時は必ず初回通知を強制
-            prev_state = "not_available"
-        else:
-            prev_state = prev.get(n, "not_available")
-
-        notify = (prev_state == "not_available" and s == "available")
-        print(f"[{timestamp()}] {n} | prev={prev_state} current={s} notify={'yes' if notify else 'no'}")
-        if notify:
-            send_mail(n, TARGETS[n], prev_state, s)
-
-    save_status(current)
-    print(f"[{timestamp()}] status.json saved")
-
-if __name__ == "__main__":
-    main()
+      - name: Commit status.json
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add status.json
+          git commit -m "Update status.json [skip ci]" || echo "No changes to commit"
+          git push
