@@ -89,7 +89,7 @@ def save_status(status: dict) -> None:
         json.dump(status, f, ensure_ascii=False, indent=2)
 
 def send_mail(name: str, url: str, prev_state: str, current_state: str) -> None:
-    subject = f"UR空き通知: {name}"
+    subject = f"UR空き {name}"
     body = (
         f"物件名: {name}\n"
         f"URL: {url}\n"
