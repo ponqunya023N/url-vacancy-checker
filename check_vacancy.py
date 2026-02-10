@@ -119,20 +119,21 @@ def main() -> None:
     prev = load_status()
     current = check_targets()
 
-    manual_run = os.getenv("MANUAL_RUN") == "true"
+    # manual_run = os.getenv("MANUAL_RUN") == "true" # 判定をスキップし常に前回比較を行う
 
     for n, s in current.items():
         if s in ["error", "unknown"]:
             current[n] = prev.get(n, "not_available")
             continue
 
-        if manual_run:
-            if s == "available":
-                send_mail(n, TARGETS[n], "manual_check", s)
-        else:
-            prev_state = prev.get(n, "not_available")
-            if prev_state == "not_available" and s == "available":
-                send_mail(n, TARGETS[n], prev_state, s)
+        # 以下、定期監視としての比較ロジックに一本化
+        # if manual_run:
+        #     if s == "available":
+        #         send_mail(n, TARGETS[n], "manual_check", s)
+        # else:
+        prev_state = prev.get(n, "not_available")
+        if prev_state == "not_available" and s == "available":
+            send_mail(n, TARGETS[n], prev_state, s)
 
     save_status(current)
     print(f"[{timestamp()}] Status file updated.")
