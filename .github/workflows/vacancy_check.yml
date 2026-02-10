@@ -1,21 +1,25 @@
 name: URL Vacancy Checker
 
 on:
-  workflow_dispatch:        # 手動実行
-  schedule:
-    - cron: '*/3 * * * *'  # 3分ごとに実行（GitHubの混雑状況により遅延あり）
+  workflow_dispatch:        # Cloudflare WorkersからのAPI呼び出し、または手動実行のみを受け付ける
+#  schedule:                 # Cloudflare側で管理するため、二重起動防止でコメントアウト（または削除）
+#    - cron: '*/3 * * * *'
 
 permissions:
-  contents: write           # リポジトリへの書き込み権限を付与
+  contents: write           # status.jsonを更新するために必要
 
 jobs:
   vacancy-check:
     runs-on: ubuntu-latest
+    concurrency:            # 同時実行によるGitコンフリクトを回避
+      group: vacancy-check
+      cancel-in-progress: false
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           persist-credentials: true
 
       - name: Set up Python
@@ -34,6 +38,7 @@ jobs:
       - name: Run vacancy check
         run: python check_vacancy.py
         env:
+          # Cloudflareからの dispatch は workflow_dispatch なので、ここで判定が正しく行われます
           MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' }}
           FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
           TO_EMAIL: ${{ secrets.TO_EMAIL }}
@@ -46,6 +51,8 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
+          # push前に最新状態を取り込み、status.jsonが正しく保存されるようにする
+          git pull origin main
           git add status.json
           git commit -m "Update status.json [skip ci]" || echo "No changes to commit"
-          git push
+          git push origin main
