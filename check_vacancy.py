@@ -3,8 +3,8 @@
 
 import os
 import json
-import smtplib
-from email.mime.text import MIMEText
+import urllib.request
+import urllib.parse
 from datetime import datetime, timedelta, timezone
 from playwright.sync_api import sync_playwright, TimeoutError
 
@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright, TimeoutError
 JST = timezone(timedelta(hours=9))
 STATUS_FILE = "status.json"
 
-# 監視対象（名前→URL）
+# 監視対象（ご指定の11件）
 TARGETS = {
     "【S/A】光が丘パークタウン プロムナード十番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4350.html",
     "【A/C】光が丘パークタウン 公園南": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3500.html",
@@ -25,55 +25,48 @@ TARGETS = {
     "【D/D】(赤塚)むつみ台": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_2410.html",
     "【D/C】(赤塚)光が丘パークタウン ゆりの木通り北": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3470.html",
     "【E/A】(遠い)グリーンプラザ高松": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4650.html",
-    # --- テスト用物件 ---
-    "【Eテスト】千葉ニュータウン小室ハイランド": "https://www.ur-net.go.jp/chintai/kanto/chiba/30_3300.html"
 }
 
 def timestamp() -> str:
     return datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
 
 def judge_vacancy(browser, url: str) -> dict:
-    """
-    空室判定ロジック:
-    - 複数室の全抽出に対応。
-    - 家賃情報がないダミー行はスキップ。
-    """
     page = browser.new_page()
     result = {"status": "unknown", "details": []}
     try:
         page.goto(url, timeout=15000, wait_until="domcontentloaded")
-        
         try:
             page.wait_for_selector("tbody.rep_room tr, .err-box.err-box--empty-room", timeout=8000)
         except TimeoutError:
             pass 
 
-        # 1. 空室あり判定
         rows = page.query_selector_all("tbody.rep_room tr")
         if rows:
             found_valid_room = False
             for row in rows:
                 try:
-                    # 家賃(rent)の存在を確認
                     rent_elem = row.query_selector("span.rep_room-price")
-                    if not rent_elem:
-                        continue 
-
+                    if not rent_elem: continue
                     rent = rent_elem.inner_text().strip()
-                    if not rent or rent == "不明":
-                        continue 
+                    if not rent or rent == "不明": continue
 
-                    # 有効な部屋情報を抽出
                     found_valid_room = True
                     common_elem = row.query_selector("span.rep_room-commonfee")
                     img_elem = row.query_selector("div.item_image img")
                     room_name_elem = row.query_selector("td.rep_room-name")
 
                     common = common_elem.inner_text().strip() if common_elem else ""
-                    img_url = img_elem.get_attribute("src") if img_elem else "画像なし"
+                    # 画像URLを絶対パスに変換
+                    img_url = img_elem.get_attribute("src") if img_elem else ""
+                    if img_url and img_url.startswith("/"):
+                        img_url = "https://www.ur-net.go.jp" + img_url
+                    
                     room_name = room_name_elem.inner_text().strip() if room_name_elem else ""
 
-                    result["details"].append(f"・{room_name} 家賃: {rent} 共益費: {common}\n  間取図: {img_url}")
+                    result["details"].append({
+                        "text": f"🏢 <b>{room_name}</b>\n家賃: {rent} (共益費: {common})",
+                        "img_url": img_url
+                    })
                 except:
                     continue
             
@@ -81,12 +74,10 @@ def judge_vacancy(browser, url: str) -> dict:
                 result["status"] = "available"
                 return result
 
-        # 2. 空室なし判定
         empty_box = page.query_selector("div.err-box.err-box--empty-room")
-        if empty_box:
-            if "ございません" in (empty_box.inner_text() or ""):
-                result["status"] = "not_available"
-                return result
+        if empty_box and "ございません" in (empty_box.inner_text() or ""):
+            result["status"] = "not_available"
+            return result
 
         return result
     except Exception:
@@ -95,75 +86,89 @@ def judge_vacancy(browser, url: str) -> dict:
     finally:
         page.close()
 
-def check_targets() -> dict:
-    results = {}
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
-        for name, url in TARGETS.items():
-            res_dict = judge_vacancy(browser, url)
-            print(f"[{timestamp()}] {name}: {res_dict['status']}")
-            results[name] = res_dict
-        browser.close()
-    return results
+def send_telegram(name: str, url: str, current_res: dict) -> None:
+    """Telegram Bot APIを使用して画像付きで通知"""
+    token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not token or not chat_id: return
 
-def load_status() -> dict:
+    # 1. まずメインの見出しを送信
+    head_message = (
+        f"🌟 <b>UR空室発見！</b>\n\n"
+        f"物件: <b>{name}</b>\n"
+        f"🔗 <a href='{url}'>物件詳細ページを開く</a>\n"
+        f"⏰ 確認: {timestamp()}"
+    )
+    
+    def call_api(method, payload):
+        api_url = f"https://api.telegram.org/bot{token}/{method}"
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(api_url, data=data, headers={"Content-Type": "application/json"})
+        with urllib.request.urlopen(req) as response:
+            pass
+
+    try:
+        # メイン通知の送信
+        call_api("sendMessage", {
+            "chat_id": chat_id,
+            "text": head_message,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True
+        })
+
+        # 2. 部屋ごとの詳細と画像を送信
+        for detail in current_res["details"]:
+            if detail["img_url"]:
+                # 画像がある場合は sendPhoto
+                call_api("sendPhoto", {
+                    "chat_id": chat_id,
+                    "photo": detail["img_url"],
+                    "caption": detail["text"],
+                    "parse_mode": "HTML"
+                })
+            else:
+                # 画像がない場合は sendMessage
+                call_api("sendMessage", {
+                    "chat_id": chat_id,
+                    "text": detail["text"],
+                    "parse_mode": "HTML"
+                })
+    except Exception as e:
+        print(f"Telegram Send Error: {e}")
+
+def main() -> None:
+    # ステータスロード
     if os.path.exists(STATUS_FILE):
         try:
             with open(STATUS_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {name: "not_available" for name in TARGETS.keys()}
+                prev = json.load(f)
+        except:
+            prev = {name: "not_available" for name in TARGETS.keys()}
+    else:
+        prev = {name: "not_available" for name in TARGETS.keys()}
 
-def save_status(status_dict: dict) -> None:
-    save_data = {n: s["status"] if isinstance(s, dict) else s for n, s in status_dict.items()}
-    with open(STATUS_FILE, "w", encoding="utf-8") as f:
-        json.dump(save_data, f, ensure_ascii=False, indent=2)
-
-def send_mail(name: str, url: str, prev_state: str, current_res: dict) -> None:
-    current_state = current_res["status"]
-    details_text = "\n".join(current_res["details"])
-    
-    subject = f"UR空き {name}"
-    body = (
-        f"物件名: {name}\n"
-        f"URL: {url}\n"
-        f"判定: {prev_state} → {current_state}\n\n"
-        f"【空室詳細情報】\n{details_text}\n\n"
-        f"確認日時: {timestamp()}"
-    )
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = os.getenv("FROM_EMAIL")
-    msg["To"] = os.getenv("TO_EMAIL")
-
-    try:
-        smtp_server = os.getenv("SMTP_SERVER")
-        smtp_port = os.getenv("SMTP_PORT")
-        if not all([smtp_server, smtp_port]): return
-        with smtplib.SMTP(smtp_server, int(smtp_port)) as server:
-            server.starttls()
-            server.login(os.getenv("SMTP_USERNAME"), os.getenv("SMTP_PASSWORD"))
-            server.send_message(msg)
-    except Exception as e:
-        print(f"Mail error: {e}")
-
-def main() -> None:
-    prev = load_status()
-    current_results = check_targets()
     next_status_data = {}
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        for name, url in TARGETS.items():
+            res = judge_vacancy(browser, url)
+            s = res["status"]
+            print(f"[{timestamp()}] {name}: {s}")
 
-    for n, res in current_results.items():
-        s = res["status"]
-        if s in ["error", "unknown"]:
-            next_status_data[n] = prev.get(n, "not_available")
-            continue
-        prev_state = prev.get(n, "not_available")
-        if prev_state == "not_available" and s == "available":
-            send_mail(n, TARGETS[n], prev_state, res)
-        next_status_data[n] = s
+            if s in ["error", "unknown"]:
+                next_status_data[name] = prev.get(name, "not_available")
+                continue
 
-    save_status(next_status_data)
+            # 通知ロジック
+            if prev.get(name) == "not_available" and s == "available":
+                send_telegram(name, url, res)
+            
+            next_status_data[name] = s
+        browser.close()
+
+    # ステータス保存
+    with open(STATUS_FILE, "w", encoding="utf-8") as f:
+        json.dump(next_status_data, f, ensure_ascii=False, indent=2)
 
 if __name__ == "__main__":
     main()
