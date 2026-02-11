@@ -35,10 +35,13 @@ def judge_vacancy(browser, url: str) -> dict:
     page = browser.new_page()
     result = {"status": "unknown", "details": []}
     try:
-        page.goto(url, timeout=15000, wait_until="domcontentloaded")
+        # タイムアウトを少し伸ばし、ネットワークが落ち着くまで待機
+        page.goto(url, timeout=25000, wait_until="networkidle")
+        
+        # 判定用要素（表、または空室なしBOX）が出るまで待つ
         try:
-            page.wait_for_selector("tbody.rep_room tr, .err-box.err-box--empty-room", timeout=8000)
-        except TimeoutError:
+            page.wait_for_selector("tbody.rep_room tr, .err-box.err-box--empty-room", timeout=10000)
+        except:
             pass 
 
         rows = page.query_selector_all("tbody.rep_room tr")
@@ -75,13 +78,15 @@ def judge_vacancy(browser, url: str) -> dict:
                 result["status"] = "available"
                 return result
 
-        empty_box = page.query_selector("div.err-box.err-box--empty-room")
-        if empty_box and "ございません" in (empty_box.inner_text() or ""):
+        # 文字列判定によるバックアップ判定
+        content = page.content()
+        if "ございません" in content or page.query_selector("div.err-box.err-box--empty-room"):
             result["status"] = "not_available"
             return result
 
         return result
-    except Exception:
+    except Exception as e:
+        print(f"[{timestamp()}] Error checking {url}: {e}")
         result["status"] = "error"
         return result
     finally:
@@ -93,7 +98,7 @@ def send_telegram(name: str, url: str, current_res: dict) -> None:
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id: return
 
-    # 1. まずメインの見出しを送信
+    # 1. メインの見出し
     head_message = (
         f"🌟 <b>UR空室発見！</b>\n\n"
         f"物件: <b>{name}</b>\n"
@@ -109,7 +114,7 @@ def send_telegram(name: str, url: str, current_res: dict) -> None:
             pass
 
     try:
-        # メイン通知の送信
+        # 見出し送信
         call_api("sendMessage", {
             "chat_id": chat_id,
             "text": head_message,
@@ -120,7 +125,6 @@ def send_telegram(name: str, url: str, current_res: dict) -> None:
         # 2. 部屋ごとの詳細と画像を送信
         for detail in current_res["details"]:
             if detail["img_url"]:
-                # 画像がある場合は sendPhoto
                 call_api("sendPhoto", {
                     "chat_id": chat_id,
                     "photo": detail["img_url"],
@@ -128,14 +132,13 @@ def send_telegram(name: str, url: str, current_res: dict) -> None:
                     "parse_mode": "HTML"
                 })
             else:
-                # 画像がない場合は sendMessage
                 call_api("sendMessage", {
                     "chat_id": chat_id,
                     "text": detail["text"],
                     "parse_mode": "HTML"
                 })
     except Exception as e:
-        print(f"Telegram Send Error: {e}")
+        print(f"[{timestamp()}] Telegram Send Error: {e}")
 
 def main() -> None:
     # ステータスロード
@@ -143,7 +146,8 @@ def main() -> None:
         try:
             with open(STATUS_FILE, "r", encoding="utf-8") as f:
                 prev = json.load(f)
-        except:
+        except Exception as e:
+            print(f"[{timestamp()}] Warning: status.json load failed: {e}")
             prev = {name: "not_available" for name in TARGETS.keys()}
     else:
         prev = {name: "not_available" for name in TARGETS.keys()}
@@ -157,10 +161,11 @@ def main() -> None:
             print(f"[{timestamp()}] {name}: {s}")
 
             if s in ["error", "unknown"]:
+                # 判定失敗時は前回の状態を維持して、誤通知を防ぐ
                 next_status_data[name] = prev.get(name, "not_available")
                 continue
 
-            # 通知ロジック
+            # 通知：前回のステータスが「空室なし」で、今回が「あり」の時
             if prev.get(name) == "not_available" and s == "available":
                 send_telegram(name, url, res)
             
@@ -168,8 +173,11 @@ def main() -> None:
         browser.close()
 
     # ステータス保存
-    with open(STATUS_FILE, "w", encoding="utf-8") as f:
-        json.dump(next_status_data, f, ensure_ascii=False, indent=2)
+    try:
+        with open(STATUS_FILE, "w", encoding="utf-8") as f:
+            json.dump(next_status_data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"[{timestamp()}] Error saving status.json: {e}")
 
 if __name__ == "__main__":
     main()
