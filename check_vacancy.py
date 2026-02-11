@@ -25,6 +25,8 @@ TARGETS = {
     "【D/D】(赤塚)むつみ台": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_2410.html",
     "【D/C】(赤塚)光が丘パークタウン ゆりの木通り北": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3470.html",
     "【E/A】(遠い)グリーンプラザ高松": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4650.html",
+    # --- テスト用物件 ---
+    "【Eテスト】千葉ニュータウン小室ハイランド": "https://www.ur-net.go.jp/chintai/kanto/chiba/30_3300.html"
 }
 
 def timestamp() -> str:
@@ -33,8 +35,8 @@ def timestamp() -> str:
 def judge_vacancy(browser, url: str) -> dict:
     """
     空室判定ロジック:
-    - 高速化のため要素の出現を待機する。
-    - 解析したHTML構造に基づき、家賃・共益費・間取図URLを正確に抽出する。
+    - 複数室の全抽出に対応。
+    - 家賃情報がないダミー行はスキップ。
     """
     page = browser.new_page()
     result = {"status": "unknown", "details": []}
@@ -49,24 +51,35 @@ def judge_vacancy(browser, url: str) -> dict:
         # 1. 空室あり判定
         rows = page.query_selector_all("tbody.rep_room tr")
         if rows:
-            result["status"] = "available"
+            found_valid_room = False
             for row in rows:
                 try:
-                    # 解析データに基づく正確なセレクタ
+                    # 家賃(rent)の存在を確認
                     rent_elem = row.query_selector("span.rep_room-price")
+                    if not rent_elem:
+                        continue 
+
+                    rent = rent_elem.inner_text().strip()
+                    if not rent or rent == "不明":
+                        continue 
+
+                    # 有効な部屋情報を抽出
+                    found_valid_room = True
                     common_elem = row.query_selector("span.rep_room-commonfee")
                     img_elem = row.query_selector("div.item_image img")
                     room_name_elem = row.query_selector("td.rep_room-name")
 
-                    rent = rent_elem.inner_text().strip() if rent_elem else "不明"
-                    common = common_elem.inner_text().strip() if common_elem else "不明"
+                    common = common_elem.inner_text().strip() if common_elem else ""
                     img_url = img_elem.get_attribute("src") if img_elem else "画像なし"
                     room_name = room_name_elem.inner_text().strip() if room_name_elem else ""
 
                     result["details"].append(f"・{room_name} 家賃: {rent} 共益費: {common}\n  間取図: {img_url}")
                 except:
                     continue
-            return result
+            
+            if found_valid_room:
+                result["status"] = "available"
+                return result
 
         # 2. 空室なし判定
         empty_box = page.query_selector("div.err-box.err-box--empty-room")
