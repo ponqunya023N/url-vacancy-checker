@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright, TimeoutError
 JST = timezone(timedelta(hours=9))
 STATUS_FILE = "status.json"
 
-# 監視対象（ご指定の11件）
+# 監視対象（ご指定の11件 + テスト用1件 = 計12件）
 TARGETS = {
     "【S/A】光が丘パークタウン プロムナード十番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4350.html",
     "【A/C】光が丘パークタウン 公園南": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3500.html",
@@ -25,6 +25,7 @@ TARGETS = {
     "【D/D】(赤塚)むつみ台": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_2410.html",
     "【D/C】(赤塚)光が丘パークタウン ゆりの木通り北": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3470.html",
     "【E/A】(遠い)グリーンプラザ高松": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4650.html",
+    "【Eテスト】千葉ニュータウン小室ハイランド": "https://www.ur-net.go.jp/chintai/kanto/chiba/40_3030.html",
 }
 
 def timestamp() -> str:
