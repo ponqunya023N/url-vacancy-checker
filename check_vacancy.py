@@ -30,12 +30,14 @@ TARGETS = {
 def timestamp() -> str:
     return datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
 
-def judge_vacancy(browser, url: str) -> str:
+def judge_vacancy(browser, url: str) -> dict:
     """
     空室判定ロジック:
     - 高速化のため要素の出現を待機する。
+    - 空室時は家賃・共益費・間取図URLを抽出する。
     """
     page = browser.new_page()
+    result = {"status": "unknown", "details": []}
     try:
         # タイムアウトを15秒に設定
         page.goto(url, timeout=15000, wait_until="domcontentloaded")
@@ -47,20 +49,38 @@ def judge_vacancy(browser, url: str) -> str:
             pass 
 
         # 1. 空室あり判定
-        if page.query_selector("tbody.rep_room tr") or page.query_selector("a.rep_room-link"):
-            return "available"
+        rows = page.query_selector_all("tbody.rep_room tr")
+        if rows:
+            result["status"] = "available"
+            for row in rows:
+                # 部屋ごとの詳細情報を抽出
+                try:
+                    rent = (row.query_selector("td.rent").inner_text() or "").strip()
+                    common = (row.query_selector("td.common").inner_text() or "").strip()
+                    # 間取図のサムネイルURLを抽出
+                    img_elem = row.query_selector("td.floor_plan img")
+                    img_url = img_elem.get_attribute("src") if img_elem else "なし"
+                    if img_url and img_url.startswith("/"):
+                        img_url = "https://www.ur-net.go.jp" + img_url
+
+                    result["details"].append(f"・家賃: {rent} (共益費: {common})\n  間取図: {img_url}")
+                except:
+                    continue
+            return result
 
         # 2. 空室なし判定
         empty_box = page.query_selector("div.err-box.err-box--empty-room")
         if empty_box:
             text = (empty_box.inner_text() or "").strip()
             if "ございません" in text:
-                return "not_available"
+                result["status"] = "not_available"
+                return result
 
-        return "unknown"
+        return result
     except Exception as e:
         print(f"Error accessing {url}: {e}")
-        return "error"
+        result["status"] = "error"
+        return result
     finally:
         page.close()
 
@@ -69,9 +89,9 @@ def check_targets() -> dict:
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         for name, url in TARGETS.items():
-            status = judge_vacancy(browser, url)
-            print(f"[{timestamp()}] {name}: {status}")
-            results[name] = status
+            res_dict = judge_vacancy(browser, url)
+            print(f"[{timestamp()}] {name}: {res_dict['status']}")
+            results[name] = res_dict
         browser.close()
     return results
 
@@ -84,16 +104,22 @@ def load_status() -> dict:
             pass
     return {name: "not_available" for name in TARGETS.keys()}
 
-def save_status(status: dict) -> None:
+def save_status(status_dict: dict) -> None:
+    # 状態ファイルには status 文字列のみを保存する
+    save_data = {n: s["status"] if isinstance(s, dict) else s for n, s in status_dict.items()}
     with open(STATUS_FILE, "w", encoding="utf-8") as f:
-        json.dump(status, f, ensure_ascii=False, indent=2)
+        json.dump(save_data, f, ensure_ascii=False, indent=2)
 
-def send_mail(name: str, url: str, prev_state: str, current_state: str) -> None:
+def send_mail(name: str, url: str, prev_state: str, current_res: dict) -> None:
+    current_state = current_res["status"]
+    details_text = "\n".join(current_res["details"])
+    
     subject = f"UR空き {name}"
     body = (
         f"物件名: {name}\n"
         f"URL: {url}\n"
-        f"判定: {prev_state} → {current_state}\n"
+        f"判定: {prev_state} → {current_state}\n\n"
+        f"【空室詳細情報】\n{details_text}\n\n"
         f"確認日時: {timestamp()}"
     )
     msg = MIMEText(body)
@@ -117,25 +143,24 @@ def send_mail(name: str, url: str, prev_state: str, current_state: str) -> None:
 
 def main() -> None:
     prev = load_status()
-    current = check_targets()
+    current_results = check_targets()
 
-    # manual_run = os.getenv("MANUAL_RUN") == "true"
+    # save_status用にstatus文字列だけの辞書も用意
+    next_status_data = {}
 
-    for n, s in current.items():
+    for n, res in current_results.items():
+        s = res["status"]
         if s in ["error", "unknown"]:
-            current[n] = prev.get(n, "not_available")
+            next_status_data[n] = prev.get(n, "not_available")
             continue
 
-        # Cloudflareからの実行も通常の定期監視として扱う
-        # if manual_run:
-        #     if s == "available":
-        #         send_mail(n, TARGETS[n], "manual_check", s)
-        # else:
         prev_state = prev.get(n, "not_available")
         if prev_state == "not_available" and s == "available":
-            send_mail(n, TARGETS[n], prev_state, s)
+            send_mail(n, TARGETS[n], prev_state, res)
+        
+        next_status_data[n] = s
 
-    save_status(current)
+    save_status(next_status_data)
     print(f"[{timestamp()}] Status file updated.")
 
 if __name__ == "__main__":
