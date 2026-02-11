@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright, TimeoutError
 JST = timezone(timedelta(hours=9))
 STATUS_FILE = "status.json"
 
-# 監視対象（URLは一切変更せず固定）
+# 監視対象（URL固定）
 TARGETS = {
     "【S/A】光が丘パークタウン プロムナード十番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4350.html",
     "【A/C】光が丘パークタウン 公園南": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3500.html",
@@ -39,61 +39,55 @@ def judge_vacancy(browser, name: str, url: str) -> dict:
         try:
             page.wait_for_selector("tbody.rep_room tr, .err-box.err-box--empty-room", timeout=10000)
         except TimeoutError:
-            print(f"[{timestamp()}] [DEBUG] {name}: タイムアウト（空室なしか読み込み遅延）")
+            pass
 
         rows = page.query_selector_all("tbody.rep_room tr")
-        print(f"[{timestamp()}] [DEBUG] {name}: {len(rows)}件の空室行を検出")
+        print(f"[{timestamp()}] [DEBUG] {name}: {len(rows)}件の行を検出")
 
         if rows:
             found_valid_room = False
             for i, row in enumerate(rows, 1):
                 try:
-                    # 部屋名取得
+                    rent_elem = row.query_selector("span.rep_room-price")
+                    if not rent_elem: continue
+                    rent = rent_elem.inner_text().strip()
+                    if not rent or rent == "不明": continue
+
+                    found_valid_room = True
+                    common_elem = row.query_selector("span.rep_room-commonfee")
+                    img_elem = row.query_selector("div.item_image img, .rep_room-image img, td img")
                     room_name_elem = row.query_selector("td.rep_room-name")
+
+                    common = common_elem.inner_text().strip() if common_elem else ""
                     room_name = room_name_elem.inner_text().strip() if room_name_elem else f"部屋{i}"
 
-                    # 家賃取得
-                    rent_elem = row.query_selector("span.rep_room-price")
-                    rent = rent_elem.inner_text().strip() if rent_elem else "取得失敗"
-
-                    # 画像URL取得（ここを重点的にログ出し）
-                    img_elem = row.query_selector("div.item_image img, .rep_room-image img") # 候補を増やす
+                    # 画像URLの完全な構築 (メール版のsrc取得をベースに強化)
                     img_url = ""
                     if img_elem:
-                        raw_src = img_elem.get_attribute("src")
-                        if raw_src:
-                            img_url = urllib.parse.urljoin("https://www.ur-net.go.jp", raw_src)
-                            print(f"  [DEBUG] 部屋{i}({room_name}): 画像URL取得成功: {img_url}")
-                        else:
-                            print(f"  [DEBUG] 部屋{i}({room_name}): imgタグはあるがsrcが空です")
-                    else:
-                        print(f"  [DEBUG] 部屋{i}({room_name}): 画像タグ(img)が見つかりません")
+                        src = img_elem.get_attribute("src")
+                        if src:
+                            img_url = urllib.parse.urljoin("https://www.ur-net.go.jp", src)
 
-                    print(f"  [DEBUG] 部屋{i}({room_name}): 家賃={rent}")
+                    print(f"  [DEBUG] 部屋{i}({room_name}): 取得完了 (画像URL: {img_url})")
 
-                    # 家賃が「不明」でも details には追加する（通知を止めないため）
-                    found_valid_room = True
                     result["details"].append({
-                        "text": f"🏢 <b>{room_name}</b>\n家賃: {rent}",
+                        "text": f"🏢 <b>{room_name}</b>\n家賃: {rent} (共益費: {common})",
                         "img_url": img_url
                     })
-
                 except Exception as e:
-                    print(f"  [DEBUG] 部屋{i}: 処理中にエラー発生: {e}")
+                    print(f"  [DEBUG] 部屋{i} 抽出エラー: {e}")
                     continue
             
             if found_valid_room:
                 result["status"] = "available"
                 return result
 
-        # 満室判定
-        content = page.content()
-        if "ございません" in content or "満室" in content or page.query_selector(".err-box"):
+        if "ございません" in page.content() or page.query_selector(".err-box"):
             result["status"] = "not_available"
         
         return result
     except Exception as e:
-        print(f"[{timestamp()}] [DEBUG] {name}: 全体処理エラー: {e}")
+        print(f"[{timestamp()}] {name} 全体エラー: {e}")
         result["status"] = "error"
         return result
     finally:
@@ -104,30 +98,28 @@ def send_telegram(name: str, url: str, current_res: dict) -> None:
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id: return
 
-    head_message = (
-        f"🌟 <b>UR空室発見！</b>\n\n"
-        f"物件: <b>{name}</b>\n"
-        f"🔗 <a href='{url}'>物件詳細ページを開く</a>\n"
-        f"⏰ 確認: {timestamp()}"
-    )
-    
     def call_api(method, payload):
         api_url = f"https://api.telegram.org/bot{token}/{method}"
-        data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(api_url, data=data, headers={"Content-Type": "application/json"})
+        req = urllib.request.Request(
+            api_url, 
+            data=json.dumps(payload).encode("utf-8"), 
+            headers={"Content-Type": "application/json"}
+        )
         with urllib.request.urlopen(req) as response:
             return response.read()
 
     try:
+        # メイン通知
         call_api("sendMessage", {
             "chat_id": chat_id,
-            "text": head_message,
+            "text": f"🌟 <b>UR空室発見！</b>\n\n物件: <b>{name}</b>\n🔗 <a href='{url}'>物件詳細ページ</a>\n⏰ {timestamp()}",
             "parse_mode": "HTML",
             "disable_web_page_preview": True
         })
 
+        # 部屋ごとの画像と詳細
         for detail in current_res["details"]:
-            if detail["img_url"]:
+            if detail["img_url"] and detail["img_url"] != "画像なし":
                 try:
                     call_api("sendPhoto", {
                         "chat_id": chat_id,
@@ -136,12 +128,12 @@ def send_telegram(name: str, url: str, current_res: dict) -> None:
                         "parse_mode": "HTML"
                     })
                 except Exception as e:
-                    print(f"  [DEBUG] Telegram画像送信失敗(部屋情報のみ送信に切替): {e}")
+                    print(f"  [DEBUG] Telegram画像送信失敗: {detail['img_url']} - {e}")
                     call_api("sendMessage", {"chat_id": chat_id, "text": detail["text"], "parse_mode": "HTML"})
             else:
                 call_api("sendMessage", {"chat_id": chat_id, "text": detail["text"], "parse_mode": "HTML"})
     except Exception as e:
-        print(f"Telegram通知全体エラー: {e}")
+        print(f"Telegram全体送信エラー: {e}")
 
 def main() -> None:
     if os.path.exists(STATUS_FILE):
@@ -161,7 +153,6 @@ def main() -> None:
             s = res["status"]
             print(f"[{timestamp()}] {name}: {s}")
 
-            # 状態更新と通知
             if s in ["error", "unknown"]:
                 next_status_data[name] = prev.get(name, "not_available")
             else:
