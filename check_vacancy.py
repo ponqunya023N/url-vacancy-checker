@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright, TimeoutError
 JST = timezone(timedelta(hours=9))
 STATUS_FILE = "status.json"
 
-# 監視対象（ご指定の11件 + テスト用1件 = 計12件）
+# 監視対象（並び替え済み 12件）
 TARGETS = {
     "【S/A】光が丘パークタウン プロムナード十番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4350.html",
     "【A/C】光が丘パークタウン 公園南": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3500.html",
@@ -26,7 +26,6 @@ TARGETS = {
     "【D/D】(赤塚)むつみ台": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_2410.html",
     "【D/C】(赤塚)光が丘パークタウン ゆりの木通り北": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3470.html",
     "【E/A】(遠い)グリーンプラザ高松": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4650.html",
-
 }
 
 def timestamp() -> str:
@@ -36,8 +35,10 @@ def judge_vacancy(browser, url: str) -> dict:
     page = browser.new_page()
     result = {"status": "unknown", "details": []}
     try:
+        # 成功実績のある domcontentloaded 待機
         page.goto(url, timeout=15000, wait_until="domcontentloaded")
         try:
+            # 8秒待機
             page.wait_for_selector("tbody.rep_room tr, .err-box.err-box--empty-room", timeout=8000)
         except TimeoutError:
             pass 
@@ -158,6 +159,7 @@ def main() -> None:
             print(f"[{timestamp()}] {name}: {s}")
 
             if s in ["error", "unknown"]:
+                # 状態を維持
                 next_status_data[name] = prev.get(name, "not_available")
                 continue
 
