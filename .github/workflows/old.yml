@@ -1,0 +1,58 @@
+
+name: URL Vacancy Checker
+
+on:
+  workflow_dispatch:        # Cloudflare WorkersからのAPI呼び出し、または手動実行のみ
+#  schedule:                 # Cloudflare側で管理するため二重起動防止で停止
+#    - cron: '*/3 * * * *'
+
+permissions:
+  contents: write           # status.jsonを更新するために必須
+
+jobs:
+  vacancy-check:
+    runs-on: ubuntu-latest
+    concurrency:            # 3分おきの実行でGitの競合（ロック）を防ぐ
+      group: vacancy-check
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install playwright==1.49.0
+
+      - name: Install browsers
+        run: playwright install --with-deps
+
+      - name: Run vacancy check
+        run: python check_vacancy.py
+        env:
+          MANUAL_RUN: ${{ github.event_name == 'workflow_dispatch' }}
+          FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+          TO_EMAIL: ${{ secrets.TO_EMAIL }}
+          SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+
+      - name: Commit status.json
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          # push前にリモートの最新状態を取り込んでコンフリクトを回避
+          git pull origin main
+          git add status.json
+          git commit -m "Update status.json [skip ci]" || echo "No changes to commit"
+          git push origin main
