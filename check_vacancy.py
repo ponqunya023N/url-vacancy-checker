@@ -53,18 +53,25 @@ def judge_vacancy(browser, url: str) -> dict:
         if rows:
             result["status"] = "available"
             for row in rows:
-                # 部屋ごとの詳細情報を抽出
                 try:
-                    rent = (row.query_selector("td.rent").inner_text() or "").strip()
-                    common = (row.query_selector("td.common").inner_text() or "").strip()
+                    # 家賃(rent)と共益費(common)を抽出
+                    # URのHTML構造に合わせて、クラス内のテキストを柔軟に取得
+                    rent_val = row.query_selector("td.rent .item-val") or row.query_selector("td.rent")
+                    common_val = row.query_selector("td.common .item-val") or row.query_selector("td.common")
+                    
+                    rent = rent_val.inner_text().strip() if rent_val else "不明"
+                    common = common_val.inner_text().strip() if common_val else "不明"
+                    
                     # 間取図のサムネイルURLを抽出
+                    # aタグのリンク先ではなく、imgタグのsrc(サムネイル)を取得
                     img_elem = row.query_selector("td.floor_plan img")
                     img_url = img_elem.get_attribute("src") if img_elem else "なし"
                     if img_url and img_url.startswith("/"):
                         img_url = "https://www.ur-net.go.jp" + img_url
 
-                    result["details"].append(f"・家賃: {rent} (共益費: {common})\n  間取図: {img_url}")
-                except:
+                    result["details"].append(f"・家賃: {rent} / 共益費: {common}\n  間取図(小): {img_url}")
+                except Exception as inner_e:
+                    print(f"Detail extraction error: {inner_e}")
                     continue
             return result
 
@@ -105,14 +112,13 @@ def load_status() -> dict:
     return {name: "not_available" for name in TARGETS.keys()}
 
 def save_status(status_dict: dict) -> None:
-    # 状態ファイルには status 文字列のみを保存する
     save_data = {n: s["status"] if isinstance(s, dict) else s for n, s in status_dict.items()}
     with open(STATUS_FILE, "w", encoding="utf-8") as f:
         json.dump(save_data, f, ensure_ascii=False, indent=2)
 
 def send_mail(name: str, url: str, prev_state: str, current_res: dict) -> None:
     current_state = current_res["status"]
-    details_text = "\n".join(current_res["details"])
+    details_text = "\n".join(current_res["details"]) if current_res["details"] else "詳細データの抽出に失敗しました。"
     
     subject = f"UR空き {name}"
     body = (
@@ -145,7 +151,6 @@ def main() -> None:
     prev = load_status()
     current_results = check_targets()
 
-    # save_status用にstatus文字列だけの辞書も用意
     next_status_data = {}
 
     for n, res in current_results.items():
