@@ -72,7 +72,9 @@ def judge_vacancy(browser, name: str, url: str) -> dict:
                         if src and "icn_" not in src and "button" not in src:
                             img_url = urllib.parse.urljoin("https://www.ur-net.go.jp", src)
 
+                    # 部屋名（建物名含む）をIDとして保持し、詳細データを作成
                     result["details"].append({
+                        "room_id": room_name, 
                         "text": f"🏢 <b>{room_name}</b>\n家賃: {rent} (共益費: {common})",
                         "img_url": img_url
                     })
@@ -95,7 +97,8 @@ def judge_vacancy(browser, name: str, url: str) -> dict:
     finally:
         page.close()
 
-def send_telegram(name: str, url: str, current_res: dict) -> None:
+# 新しい部屋のみを送信するように引数を変更
+def send_telegram(name: str, url: str, new_rooms_details: list) -> None:
     token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not token or not chat_id: return
@@ -107,13 +110,15 @@ def send_telegram(name: str, url: str, current_res: dict) -> None:
             return response.read()
 
     try:
+        # メッセージの見出し（新しい空室のみであることを明記）
         call_api("sendMessage", {
             "chat_id": chat_id,
-            "text": f"🌟 <b>UR空室発見！</b>\n\n物件: <b>{name}</b>\n🔗 <a href='{url}'>物件詳細ページ</a>\n⏰ {timestamp()}",
+            "text": f"🌟 <b>UR空室発見（新着）！</b>\n\n物件: <b>{name}</b>\n🔗 <a href='{url}'>物件詳細ページ</a>\n⏰ {timestamp()}",
             "parse_mode": "HTML",
             "disable_web_page_preview": True
         })
-        for detail in current_res["details"]:
+        # 新しい部屋の分だけを通知
+        for detail in new_rooms_details:
             if detail["img_url"]:
                 try:
                     call_api("sendPhoto", {"chat_id": chat_id, "photo": detail["img_url"], "caption": detail["text"], "parse_mode": "HTML"})
@@ -140,14 +145,38 @@ def main() -> None:
         for name, url in TARGETS.items():
             res = judge_vacancy(browser, name, url)
             s = res["status"]
-            print(f"[{timestamp()}] {name}: {s}")
+            
+            # 過去に通知済みの部屋リストを取得（古い形式のデータだった場合は空リストにする）
+            prev_rooms = prev.get(name, [])
+            if not isinstance(prev_rooms, list):
+                prev_rooms = []
+
+            # 現在見つかった部屋のID（部屋名）リスト
+            current_rooms = [d["room_id"] for d in res["details"]]
+
+            print(f"[{timestamp()}] {name}: {s} (現在{len(current_rooms)}件 / 前回保存{len(prev_rooms)}件)")
+
             if s in ["error", "unknown"]:
-                next_status_data[name] = prev.get(name, "not_available")
+                # エラー時は前回のリストをそのまま引き継ぐ（不用意に空にしない）
+                next_status_data[name] = prev_rooms
+            elif s == "not_available":
+                # 空室なしの場合はリストを空にする（これで次に出た時に新着扱いになる）
+                # ただし、URの不安定対策として、一時的に空になっただけなら前回の情報を残す判断もあり
+                # ここでは仕様通り、空室なしとして記録する
+                next_status_data[name] = []
             else:
-                if prev.get(name) == "not_available" and s == "available":
-                    send_telegram(name, url, res)
-                next_status_data[name] = s
+                # 「現在ある部屋」の中で「前回保存されたリスト」に入っていないものだけを抽出
+                new_rooms_details = [d for d in res["details"] if d["room_id"] not in prev_rooms]
+
+                if new_rooms_details:
+                    # 新しい部屋がある場合のみ通知
+                    send_telegram(name, url, new_rooms_details)
+                
+                # 最新の部屋リストを保存用データにセット
+                next_status_data[name] = current_rooms
+
         browser.close()
+    
     with open(STATUS_FILE, "w", encoding="utf-8") as f:
         json.dump(next_status_data, f, ensure_ascii=False, indent=2)
 
