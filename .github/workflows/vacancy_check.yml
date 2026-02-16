@@ -2,7 +2,7 @@ name: URL Vacancy Checker
 
 on:
   workflow_dispatch:        # Cloudflare WorkersからのAPI呼び出し、または手動実行のみ
-#  schedule:                 # Cloudflare側で管理するため二重起動防止で停止
+#  schedule:                  # Cloudflare側で管理するため二重起動防止で停止
 #    - cron: '*/3 * * * *'
 
 permissions:
@@ -38,9 +38,10 @@ jobs:
       - name: Run vacancy check
         run: python check_vacancy.py
         env:
-          # Telegram通知用のシークレットのみを使用
+          # Telegram通知用のシークレットと、今回秘匿化したURL群を使用
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TARGET_URLS: ${{ secrets.TARGET_URLS }}
 
       - name: Commit status.json
         run: |
