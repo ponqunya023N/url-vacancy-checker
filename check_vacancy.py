@@ -5,6 +5,8 @@ import os
 import json
 import urllib.request
 import urllib.parse
+import hashlib
+import re
 from datetime import datetime, timedelta, timezone
 from playwright.sync_api import sync_playwright, TimeoutError
 
@@ -12,23 +14,23 @@ from playwright.sync_api import sync_playwright, TimeoutError
 JST = timezone(timedelta(hours=9))
 STATUS_FILE = "status.json"
 
-# 監視対象
-TARGETS = {
-    "【S/A】光が丘パークタウン プロムナード十番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4350.html",
-    "【A/C】光が丘パークタウン 公園南": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3500.html",
-    "【A/B】光が丘パークタウン 四季の香弐番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4100.html",
-    "【A/A】光が丘パークタウン 大通り中央": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4550.html",
-    "【B/B】光が丘パークタウン いちょう通り八番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3910.html",
-    "【C/B】光が丘パークタウン 大通り南": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3690.html",
-    "【D/A】(赤塚)アーバンライフゆりの木通り東": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4590.html",
-    "【D/C】(赤塚)光が丘パークタウン ゆりの木通り３３番街": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_6801.html",
-    "【D/D】(赤塚)むつみ台": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_2410.html",
-    "【D/C】(赤塚)光が丘パークタウン ゆりの木通り北": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_3470.html",
-    "【E/A】(遠い)グリーンプラザ高松": "https://www.ur-net.go.jp/chintai/kanto/tokyo/20_4650.html",
-}
-
 def timestamp() -> str:
     return datetime.now(JST).strftime("%Y-%m-%d %H:%M:%S JST")
+
+# 暗号化（ハッシュ化）用の関数を追加
+def make_hash(text: str) -> str:
+    return hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]
+
+# Secretsから読み込んだ文字列をリストに変換する関数を追加
+def parse_targets(raw_str: str) -> list:
+    targets = []
+    if not raw_str: return targets
+    parts = raw_str.split(',')
+    for part in parts:
+        if '|' in part:
+            name, url = part.strip().split('|', 1)
+            targets.append((name.strip(), url.strip()))
+    return targets
 
 def judge_vacancy(browser, name: str, url: str) -> dict:
     page = browser.new_page()
@@ -43,7 +45,11 @@ def judge_vacancy(browser, name: str, url: str) -> dict:
             pass
 
         rows = page.query_selector_all("tbody.rep_room tr")
-        print(f"[{timestamp()}] [DEBUG] {name}: {len(rows)}件検出")
+        
+        # ログには名前を出さず、プレフィックスのみ出力する
+        match = re.match(r'(【.*?】)', name)
+        prefix = match.group(1) if match else "【不明】"
+        print(f"[{timestamp()}] [DEBUG] {prefix}***: {len(rows)}件検出")
 
         if rows:
             found_valid_room = False
@@ -72,14 +78,15 @@ def judge_vacancy(browser, name: str, url: str) -> dict:
                         if src and "icn_" not in src and "button" not in src:
                             img_url = urllib.parse.urljoin("https://www.ur-net.go.jp", src)
 
-                    # 部屋名（建物名含む）をIDとして保持し、詳細データを作成
+                    # 部屋名（建物名含む）の詳細データを作成し、json保存用の暗号化IDも持たせる
                     result["details"].append({
-                        "room_id": room_name, 
+                        "room_hash": make_hash(room_name), 
                         "text": f"🏢 <b>{room_name}</b>\n家賃: {rent} (共益費: {common})",
                         "img_url": img_url
                     })
-                except Exception as e:
-                    print(f"  [DEBUG] 部屋{i} エラー: {e}")
+                except Exception:
+                    # エラーログの隠蔽（詳細は出さない）
+                    print(f"  [DEBUG] 部屋データ取得エラー（詳細は秘匿されています）")
                     continue
             
             if found_valid_room:
@@ -90,8 +97,9 @@ def judge_vacancy(browser, name: str, url: str) -> dict:
             result["status"] = "not_available"
         
         return result
-    except Exception as e:
-        print(f"[{timestamp()}] {name} 全体エラー: {e}")
+    except Exception:
+        # エラーログの徹底的な隠蔽（URLや物件名は出さない）
+        print(f"[{timestamp()}] 通信エラー発生（対象URL等の詳細は秘匿されています）")
         result["status"] = "error"
         return result
     finally:
@@ -126,8 +134,9 @@ def send_telegram(name: str, url: str, new_rooms_details: list) -> None:
                     call_api("sendMessage", {"chat_id": chat_id, "text": detail["text"], "parse_mode": "HTML"})
             else:
                 call_api("sendMessage", {"chat_id": chat_id, "text": detail["text"], "parse_mode": "HTML"})
-    except Exception as e:
-        print(f"Telegram全体送信エラー: {e}")
+    except Exception:
+        # エラーログの隠蔽
+        print("Telegram送信エラー（詳細は秘匿されています）")
 
 def main() -> None:
     if os.path.exists(STATUS_FILE):
@@ -140,40 +149,48 @@ def main() -> None:
         prev = {}
 
     next_status_data = {}
+    
+    # Secretsから物件リストを取得
+    raw_targets = os.getenv("TARGET_URLS", "")
+    targets_list = parse_targets(raw_targets)
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
-        for name, url in TARGETS.items():
+        for name, url in targets_list:
+            # json記録用の暗号化キー（【プレフィックス】＋ハッシュ）を作成
+            match = re.match(r'(【.*?】)', name)
+            prefix = match.group(1) if match else "【不明】"
+            safe_key = f"{prefix}{make_hash(name)}"
+
             res = judge_vacancy(browser, name, url)
             s = res["status"]
             
-            # 過去に通知済みの部屋リストを取得（古い形式のデータだった場合は空リストにする）
-            prev_rooms = prev.get(name, [])
-            if not isinstance(prev_rooms, list):
-                prev_rooms = []
+            # 過去に通知済みの部屋リストを取得（暗号化された部屋番号のリスト）
+            prev_rooms_hashes = prev.get(safe_key, [])
+            if not isinstance(prev_rooms_hashes, list):
+                prev_rooms_hashes = []
 
-            # 現在見つかった部屋のID（部屋名）リスト
-            current_rooms = [d["room_id"] for d in res["details"]]
+            # 現在見つかった部屋の暗号化IDリスト
+            current_rooms_hashes = [d["room_hash"] for d in res["details"]]
 
-            print(f"[{timestamp()}] {name}: {s} (現在{len(current_rooms)}件 / 前回保存{len(prev_rooms)}件)")
+            print(f"[{timestamp()}] {safe_key}: {s} (現在{len(current_rooms_hashes)}件 / 前回保存{len(prev_rooms_hashes)}件)")
 
             if s in ["error", "unknown"]:
                 # エラー時は前回のリストをそのまま引き継ぐ（不用意に空にしない）
-                next_status_data[name] = prev_rooms
+                next_status_data[safe_key] = prev_rooms_hashes
             elif s == "not_available":
-                # 空室なしの場合はリストを空にする（これで次に出た時に新着扱いになる）
-                # ただし、URの不安定対策として、一時的に空になっただけなら前回の情報を残す判断もあり
-                # ここでは仕様通り、空室なしとして記録する
-                next_status_data[name] = []
+                # 空室なしの場合はリストを空にする
+                next_status_data[safe_key] = []
             else:
                 # 「現在ある部屋」の中で「前回保存されたリスト」に入っていないものだけを抽出
-                new_rooms_details = [d for d in res["details"] if d["room_id"] not in prev_rooms]
+                new_rooms_details = [d for d in res["details"] if d["room_hash"] not in prev_rooms_hashes]
 
                 if new_rooms_details:
-                    # 新しい部屋がある場合のみ通知
+                    # 新しい部屋がある場合のみ通知（通知には実際の名前を渡す）
                     send_telegram(name, url, new_rooms_details)
                 
-                # 最新の部屋リストを保存用データにセット
-                next_status_data[name] = current_rooms
+                # 最新の暗号化された部屋リストを保存用データにセット
+                next_status_data[safe_key] = current_rooms_hashes
 
         browser.close()
     
