@@ -47,10 +47,10 @@
     "current_status": "available",
     "notified_rooms": [
       "d662677e7a30",
-      "44c07f61272e",
-      "c584fd1717ca",
       "5c56a4edc67c",
-      "54eb7f901810"
+      "c584fd1717ca",
+      "54eb7f901810",
+      "44c07f61272e"
     ]
   }
 }
