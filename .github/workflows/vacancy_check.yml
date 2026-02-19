@@ -1,62 +1,64 @@
-name: URL Vacancy Checker
-
-on:
-  workflow_dispatch:        # Cloudflare WorkersからのAPI呼び出し、または手動実行のみ
-#  schedule:                  # Cloudflare側で管理するため二重起動防止で停止
-#    - cron: '*/3 * * * *'
-
-permissions:
-  contents: write           # status.jsonを更新するために必須
-
-jobs:
-  vacancy-check:
-    runs-on: ubuntu-latest
-    concurrency:            # 同時に起動した場合、古い方をキャンセルして最新の1つだけを走らせる
-      group: vacancy-check
-      cancel-in-progress: true
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: true
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install playwright==1.49.0
-
-      - name: Install browsers
-        run: playwright install --with-deps
-
-      - name: Run vacancy check
-        run: python check_vacancy.py
-        env:
-          # Telegram通知用のシークレットと、今回秘匿化したURL群を使用
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          TARGET_URLS: ${{ secrets.TARGET_URLS }}
-
-      - name: Commit status.json
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          
-          # 1. 自分が書き換えたstatus.jsonをいったん退避
-          git stash
-          
-          # 2. リモートの最新状態（別の実行による更新）を取り込む
-          git pull origin main --rebase
-          
-          # 3. 退避した自分の変更を戻す（コンフリクト時は自分の変更を優先）
-          git stash pop || git checkout --ours status.json
-          
-          git add status.json
-          git commit -m "Update status.json [skip ci]" || echo "No changes to commit"
-          git push origin main
+name: URL Vacancy Checker  # [001]
+  # [002]
+on:  # [003]
+  workflow_dispatch:        # Cloudflare WorkersからのAPI呼び出し、または手動実行のみ  # [004]
+#  schedule:                  # Cloudflare側で管理するため二重起動防止で停止  # [005]
+#    - cron: '*/3 * * * *'  # [006]
+  # [007]
+permissions:  # [008]
+  contents: write           # status.jsonを更新するために必須  # [009]
+  # [010]
+jobs:  # [011]
+  vacancy-check:  # [012]
+    runs-on: ubuntu-latest  # [013]
+    concurrency:            # 同時に起動した場合、古い方をキャンセルして最新の1つだけを走らせる  # [014]
+      group: vacancy-check  # [015]
+      cancel-in-progress: true  # [016]
+  # [017]
+    steps:  # [018]
+      - name: Checkout repository  # [019]
+        uses: actions/checkout@v4  # [020]
+        with:  # [021]
+          fetch-depth: 0  # [022]
+          persist-credentials: true  # [023]
+  # [024]
+      - name: Set up Python  # [025]
+        uses: actions/setup-python@v5  # [026]
+        with:  # [027]
+          python-version: '3.11'  # [028]
+  # [029]
+      - name: Install dependencies  # [030]
+        run: |  # [031]
+          python -m pip install --upgrade pip  # [032]
+          pip install playwright==1.49.0  # [033]
+  # [034]
+      - name: Install browsers  # [035]
+        run: playwright install --with-deps  # [036]
+  # [037]
+      - name: Run vacancy check  # [038]
+        run: python check_vacancy.py  # [039]
+        env:  # [040]
+          # Telegram通知用のシークレットと、今回秘匿化したURL群を使用  # [041]
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}  # [042]
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}  # [043]
+          TARGET_URLS: ${{ secrets.TARGET_URLS }}  # [044]
+          # 【追加】SecretsからベースURLを読み込む設定  # [045]
+          BASE_URL: ${{ secrets.BASE_URL }}  # [046]
+  # [047]
+      - name: Commit status.json  # [048]
+        run: |  # [049]
+          git config --global user.name "github-actions"  # [050]
+          git config --global user.email "github-actions@github.com"  # [051]
+            # [052]
+          # 1. 自分が書き換えたstatus.jsonをいったん退避  # [053]
+          git stash  # [054]
+            # [055]
+          # 2. リモートの最新状態（別の実行による更新）を取り込む  # [056]
+          git pull origin main --rebase  # [057]
+            # [058]
+          # 3. 退避した自分の変更を戻す（コンフリクト時は自分の変更を優先）  # [059]
+          git stash pop || git checkout --ours status.json  # [060]
+            # [061]
+          git add status.json  # [062]
+          git commit -m "Update status.json [skip ci]" || echo "No changes to commit"  # [063]
+          git push origin main  # [064]
