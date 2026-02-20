@@ -48,11 +48,11 @@
   "【TEST】9586462c6e8e": {
     "current_status": "available",
     "notified_rooms": [
-      "54eb7f901810",
       "c584fd1717ca",
       "44c07f61272e",
-      "d662677e7a30",
       "5c56a4edc67c",
+      "d662677e7a30",
+      "54eb7f901810",
       "271c3f090c39"
     ]
   }
