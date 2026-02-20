@@ -1,7 +1,9 @@
 {
   "【S/A_1】bb082df7ea06": {
-    "current_status": "not_available",
-    "notified_rooms": []
+    "current_status": "available",
+    "notified_rooms": [
+      "2f5a42af9342"
+    ]
   },
   "【A/A_2】d5eedf6bb88e": {
     "current_status": "not_available",
@@ -46,12 +48,12 @@
   "【TEST】9586462c6e8e": {
     "current_status": "available",
     "notified_rooms": [
+      "d662677e7a30",
+      "271c3f090c39",
       "54eb7f901810",
       "c584fd1717ca",
-      "44c07f61272e",
-      "d662677e7a30",
       "5c56a4edc67c",
-      "271c3f090c39"
+      "44c07f61272e"
     ]
   }
 }
