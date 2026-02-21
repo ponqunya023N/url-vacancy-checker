@@ -1,6 +1,6 @@
 {
   "【S/A_1】bb082df7ea06": {
-    "current_status": "available",
+    "current_status": "not_available",
     "notified_rooms": [
       "2f5a42af9342"
     ]
@@ -48,12 +48,12 @@
   "【TEST】9586462c6e8e": {
     "current_status": "available",
     "notified_rooms": [
-      "d662677e7a30",
-      "44c07f61272e",
       "5c56a4edc67c",
-      "c584fd1717ca",
+      "44c07f61272e",
       "54eb7f901810",
-      "271c3f090c39"
+      "271c3f090c39",
+      "c584fd1717ca",
+      "d662677e7a30"
     ]
   }
 }
