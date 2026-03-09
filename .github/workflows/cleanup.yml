@@ -1,0 +1,42 @@
+name: Cleanup Old Workflow Runs
+
+on:
+  schedule:
+    # --------------------------------------------------
+    # 【設定1】実行スケジュールの指定（UTC時間）
+    # 以下の例は、毎日 日本時間 04:00 (UTC 19:00) 
+    # --------------------------------------------------
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+    # 手動実行ボタンからも起動可能
+
+env:
+  # --------------------------------------------------
+  # 【設定2】削除対象とする期間の指定
+  # 指定できる形式の例: "3 days ago", "1 hour ago", "12 hours ago"
+  # --------------------------------------------------
+  RETENTION_PERIOD: "1 hour ago"
+
+jobs:
+  delete-runs:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - name: Delete old workflow runs
+        run: |
+          # 指定された期間より前の日時を ISO 8601 形式で取得
+          # 例: 1 hour ago -> 2026-03-09T10:50:00+00:00
+          # --iso-8601=seconds を使うことで時間単位の削除に対応
+          DEL_BEFORE_DATETIME=$(date -d "${{ env.RETENTION_PERIOD }}" --iso-8601=seconds)
+          
+          echo "Current retention setting: ${{ env.RETENTION_PERIOD }}"
+          echo "Deleting runs created before: $DEL_BEFORE_DATETIME"
+          
+          # gh run delete コマンドで一括削除
+          # <$DATETIME で、その時刻より古いものをすべて対象にする
+          gh run delete --all --created "<$DEL_BEFORE_DATETIME" --repo ${{ github.repository }}
+        env:
+          GH_TOKEN: ${{ github.token }}
