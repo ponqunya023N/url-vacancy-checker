@@ -2,8 +2,8 @@ name: Cleanup Old Workflow Runs (Fixed)
 
 on:
   schedule:
-    # 日本時間 04:00 (UTC 19:00)
-    - cron: '0 19 * * *'
+    # 日本時間 01:00 (UTC 16:00) および 07:00 (UTC 22:00)
+    - cron: '0 16,22 * * *'
   workflow_dispatch:
 
 env:
