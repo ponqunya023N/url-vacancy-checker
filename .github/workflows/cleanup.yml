@@ -1,20 +1,13 @@
-name: Cleanup Old Workflow Runs
+name: Cleanup Old Workflow Runs (Fixed)
 
 on:
   schedule:
-    # --------------------------------------------------
-    # 【設定1】実行スケジュールの指定（UTC時間）
-    # 以下の例は、毎日 日本時間 04:00 (UTC 19:00) 
-    # --------------------------------------------------
+    # 日本時間 04:00 (UTC 19:00)
     - cron: '0 19 * * *'
   workflow_dispatch:
-    # 手動実行ボタンからも起動可能
 
 env:
-  # --------------------------------------------------
-  # 【設定2】削除対象とする期間の指定
-  # 指定できる形式の例: "3 days ago", "1 hour ago", "12 hours ago"
-  # --------------------------------------------------
+  # 日本時間での指定
   RETENTION_PERIOD: "1 hour ago"
 
 jobs:
@@ -27,16 +20,21 @@ jobs:
     steps:
       - name: Delete old workflow runs
         run: |
-          # 指定された期間より前の日時を ISO 8601 形式で取得
-          # 例: 1 hour ago -> 2026-03-09T10:50:00+00:00
-          # --iso-8601=seconds を使うことで時間単位の削除に対応
-          DEL_BEFORE_DATETIME=$(date -d "${{ env.RETENTION_PERIOD }}" --iso-8601=seconds)
+          # 1. 日本時間で基準時刻を計算し、UTC形式に変換
+          DEL_BEFORE_UTC=$(TZ="Asia/Tokyo" date -d "${{ env.RETENTION_PERIOD }}" -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          echo "Current retention setting: ${{ env.RETENTION_PERIOD }}"
-          echo "Deleting runs created before: $DEL_BEFORE_DATETIME"
-          
-          # gh run delete コマンドで一括削除
-          # <$DATETIME で、その時刻より古いものをすべて対象にする
-          gh run delete --all --created "<$DEL_BEFORE_DATETIME" --repo ${{ github.repository }}
+          echo "Retention Setting: ${{ env.RETENTION_PERIOD }}"
+          echo "Target UTC: $DEL_BEFORE_UTC"
+
+          # 2. 条件に合う実行履歴のIDを取得して削除
+          # gh run list で条件に合うIDのみを抽出し、xargs で削除コマンドに渡す
+          # --created: 指定時刻より前
+          # --limit: 一回で処理する最大件数（多すぎる場合のタイムアウト防止）
+          gh run list --repo ${{ github.repository }} \
+            --created "<$DEL_BEFORE_UTC" \
+            --limit 500 \
+            --json databaseId \
+            --jq '.[].databaseId' | \
+            xargs -I{} gh run delete {} --repo ${{ github.repository }}
         env:
           GH_TOKEN: ${{ github.token }}
