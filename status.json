@@ -32,8 +32,10 @@
     ]
   },
   "【D/C_8】a74ff8d8818d": {
-    "current_status": "not_available",
-    "notified_rooms": []
+    "current_status": "available",
+    "notified_rooms": [
+      "90c7295ab549"
+    ]
   },
   "【D/C_9】b535a6a990cc": {
     "current_status": "not_available",
