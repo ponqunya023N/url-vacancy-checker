@@ -26,7 +26,7 @@
     ]
   },
   "【D/A_7】204eaf863f95": {
-    "current_status": "available",
+    "current_status": "not_available",
     "notified_rooms": [
       "e22a4358229d"
     ]
@@ -46,7 +46,9 @@
     "notified_rooms": []
   },
   "【S/A_11】8302ecb1c93f": {
-    "current_status": "not_available",
-    "notified_rooms": []
+    "current_status": "available",
+    "notified_rooms": [
+      "f4a70333dda3"
+    ]
   }
 }
