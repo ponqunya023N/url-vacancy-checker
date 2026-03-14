@@ -12,7 +12,7 @@
     "notified_rooms": []
   },
   "【A/C_4】db710691f15c": {
-    "current_status": "available",
+    "current_status": "not_available",
     "notified_rooms": [
       "9eaf6a0578c9"
     ]
