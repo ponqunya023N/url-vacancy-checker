@@ -12,7 +12,7 @@
     "notified_rooms": []
   },
   "【A/C_4】db710691f15c": {
-    "current_status": "available",
+    "current_status": "not_available",
     "notified_rooms": [
       "9eaf6a0578c9"
     ]
@@ -50,8 +50,8 @@
   "【S/A_11】8302ecb1c93f": {
     "current_status": "not_available",
     "notified_rooms": [
-      "0a674d75d7d7",
-      "f4a70333dda3"
+      "f4a70333dda3",
+      "0a674d75d7d7"
     ]
   }
 }
