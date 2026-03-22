@@ -51,9 +51,9 @@
   "【S/A_11】8302ecb1c93f": {
     "current_status": "available",
     "notified_rooms": [
-      "0a674d75d7d7",
       "b04347e02824",
-      "f4a70333dda3"
+      "f4a70333dda3",
+      "0a674d75d7d7"
     ]
   }
 }
