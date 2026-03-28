@@ -25,8 +25,8 @@
     "current_status": "not_available",
     "notified_rooms": [
       "21e5777b0873",
-      "914dca5e5f44",
-      "2a314f5ea00a"
+      "2a314f5ea00a",
+      "914dca5e5f44"
     ]
   },
   "【D/A_7】204eaf863f95": {
@@ -54,9 +54,9 @@
     "current_status": "available",
     "notified_rooms": [
       "3ff588100434",
+      "0a674d75d7d7",
       "f4a70333dda3",
       "576aa9c79fe3",
-      "0a674d75d7d7",
       "b04347e02824"
     ]
   }
