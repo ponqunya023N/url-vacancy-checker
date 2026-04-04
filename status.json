@@ -32,8 +32,8 @@
   "【D/A_7】204eaf863f95": {
     "current_status": "not_available",
     "notified_rooms": [
-      "b83111cd022a",
       "e22a4358229d",
+      "b83111cd022a",
       "750930ada0c1"
     ]
   },
@@ -55,10 +55,10 @@
     "current_status": "not_available",
     "notified_rooms": [
       "3ff588100434",
+      "37fabef48cf8",
       "b04347e02824",
       "0a674d75d7d7",
       "f4a70333dda3",
-      "37fabef48cf8",
       "576aa9c79fe3"
     ]
   }
