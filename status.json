@@ -58,13 +58,13 @@
   "【S/A_11】8302ecb1c93f": {
     "current_status": "not_available",
     "notified_rooms": [
-      "0a674d75d7d7",
       "f4a70333dda3",
-      "3ff588100434",
       "37fabef48cf8",
+      "0a674d75d7d7",
+      "3ff588100434",
+      "b04347e02824",
       "576aa9c79fe3",
-      "d317e449a122",
-      "b04347e02824"
+      "d317e449a122"
     ]
   }
 }
