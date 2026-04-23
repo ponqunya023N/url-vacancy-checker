@@ -14,8 +14,8 @@
   "【A/C_4】db710691f15c": {
     "current_status": "not_available",
     "notified_rooms": [
-      "9eaf6a0578c9",
-      "8918982add5b"
+      "8918982add5b",
+      "9eaf6a0578c9"
     ]
   },
   "【B/B_5】782e70c84bcf": {
@@ -35,10 +35,10 @@
   "【D/A_7】204eaf863f95": {
     "current_status": "not_available",
     "notified_rooms": [
+      "e22a4358229d",
       "b83111cd022a",
       "fa910c30393b",
-      "750930ada0c1",
-      "e22a4358229d"
+      "750930ada0c1"
     ]
   },
   "【D/C_8】a74ff8d8818d": {
@@ -58,13 +58,13 @@
   "【S/A_11】8302ecb1c93f": {
     "current_status": "not_available",
     "notified_rooms": [
-      "576aa9c79fe3",
-      "0a674d75d7d7",
-      "37fabef48cf8",
-      "d317e449a122",
-      "f4a70333dda3",
+      "3ff588100434",
       "b04347e02824",
-      "3ff588100434"
+      "d317e449a122",
+      "576aa9c79fe3",
+      "37fabef48cf8",
+      "0a674d75d7d7",
+      "f4a70333dda3"
     ]
   }
 }
