@@ -25,45 +25,45 @@
   "【B/B_5】782e70c84bcf": {
     "current_status": "not_available",
     "notified_rooms": [
-      "511734ad35d3",
       "402f1eca815d",
-      "781c5194196c"
+      "781c5194196c",
+      "511734ad35d3"
     ]
   },
   "【C/B_6】732db75e4400": {
     "current_status": "not_available",
     "notified_rooms": [
-      "914dca5e5f44",
       "21e5777b0873",
       "f95c5cd61c3c",
-      "96aba66a1117",
-      "2a314f5ea00a"
+      "2a314f5ea00a",
+      "914dca5e5f44",
+      "96aba66a1117"
     ]
   },
   "【D/A_7】204eaf863f95": {
     "current_status": "not_available",
     "notified_rooms": [
-      "750930ada0c1",
-      "9080e58fa594",
-      "5a0e8dfc704d",
+      "b83111cd022a",
       "e22a4358229d",
-      "fa910c30393b",
-      "b83111cd022a"
+      "5a0e8dfc704d",
+      "9080e58fa594",
+      "750930ada0c1",
+      "fa910c30393b"
     ]
   },
   "【D/C_8】a74ff8d8818d": {
     "current_status": "not_available",
     "notified_rooms": [
       "b1d3e9c32266",
-      "90c7295ab549",
-      "82275a38ed2e"
+      "82275a38ed2e",
+      "90c7295ab549"
     ]
   },
   "【D/C_9】b535a6a990cc": {
     "current_status": "not_available",
     "notified_rooms": [
-      "174f77b738c0",
-      "39b836c9c9ed"
+      "39b836c9c9ed",
+      "174f77b738c0"
     ]
   },
   "【S/A_10】dd714672906b": {
@@ -71,24 +71,24 @@
     "notified_rooms": []
   },
   "【S/A_11】8302ecb1c93f": {
-    "current_status": "available",
+    "current_status": "not_available",
     "notified_rooms": [
-      "d317e449a122",
+      "b04347e02824",
+      "0a674d75d7d7",
       "905a15180161",
       "d86cd24660c0",
-      "37fabef48cf8",
-      "0b3777195319",
-      "477b91f07ec5",
-      "0a674d75d7d7",
       "43d093ad6d9f",
-      "cf937451447f",
-      "3ff588100434",
       "a0ee7d3d6309",
-      "576aa9c79fe3",
       "e34fd46b681e",
+      "3ff588100434",
+      "d317e449a122",
+      "576aa9c79fe3",
       "f4a70333dda3",
-      "b04347e02824",
-      "c10a6b2966ac"
+      "0b3777195319",
+      "cf937451447f",
+      "477b91f07ec5",
+      "c10a6b2966ac",
+      "37fabef48cf8"
     ]
   }
 }
