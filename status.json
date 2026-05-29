@@ -20,45 +20,45 @@
   "【A/C_4】db710691f15c": {
     "current_status": "not_available",
     "notified_rooms": [
-      "9eaf6a0578c9",
-      "8918982add5b"
+      "8918982add5b",
+      "9eaf6a0578c9"
     ]
   },
   "【B/B_5】782e70c84bcf": {
     "current_status": "not_available",
     "notified_rooms": [
       "511734ad35d3",
-      "781c5194196c",
-      "402f1eca815d"
+      "402f1eca815d",
+      "781c5194196c"
     ]
   },
   "【C/B_6】732db75e4400": {
     "current_status": "not_available",
     "notified_rooms": [
-      "f95c5cd61c3c",
       "2a314f5ea00a",
+      "f95c5cd61c3c",
+      "21e5777b0873",
       "96aba66a1117",
-      "914dca5e5f44",
-      "21e5777b0873"
+      "914dca5e5f44"
     ]
   },
   "【D/A_7】204eaf863f95": {
     "current_status": "not_available",
     "notified_rooms": [
-      "5a0e8dfc704d",
-      "9080e58fa594",
       "fa910c30393b",
-      "e22a4358229d",
       "b83111cd022a",
-      "750930ada0c1"
+      "750930ada0c1",
+      "e22a4358229d",
+      "9080e58fa594",
+      "5a0e8dfc704d"
     ]
   },
   "【D/C_8】a74ff8d8818d": {
     "current_status": "not_available",
     "notified_rooms": [
       "b1d3e9c32266",
-      "90c7295ab549",
-      "82275a38ed2e"
+      "82275a38ed2e",
+      "90c7295ab549"
     ]
   },
   "【D/C_9】b535a6a990cc": {
@@ -75,24 +75,24 @@
   "【S/A_11】8302ecb1c93f": {
     "current_status": "available",
     "notified_rooms": [
-      "c10a6b2966ac",
-      "37fabef48cf8",
-      "477b91f07ec5",
-      "43d093ad6d9f",
-      "2e47d0426f9e",
-      "e34fd46b681e",
-      "905a15180161",
-      "0e0e369aece2",
       "d86cd24660c0",
+      "43d093ad6d9f",
       "576aa9c79fe3",
-      "3ff588100434",
-      "b04347e02824",
       "a0ee7d3d6309",
+      "e34fd46b681e",
+      "3ff588100434",
+      "2e47d0426f9e",
+      "b04347e02824",
+      "0a674d75d7d7",
+      "905a15180161",
+      "f4a70333dda3",
+      "0e0e369aece2",
+      "37fabef48cf8",
+      "d317e449a122",
+      "477b91f07ec5",
       "cf937451447f",
       "0b3777195319",
-      "0a674d75d7d7",
-      "d317e449a122",
-      "f4a70333dda3"
+      "c10a6b2966ac"
     ]
   }
 }
