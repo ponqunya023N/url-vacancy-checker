@@ -28,40 +28,40 @@
   "【B/B_5】782e70c84bcf": {
     "current_status": "not_available",
     "notified_rooms": [
-      "511734ad35d3",
       "402f1eca815d",
-      "781c5194196c",
-      "9dad815a8074"
+      "9dad815a8074",
+      "511734ad35d3",
+      "781c5194196c"
     ]
   },
   "【C/B_6】732db75e4400": {
     "current_status": "not_available",
     "notified_rooms": [
-      "914dca5e5f44",
+      "96aba66a1117",
       "f95c5cd61c3c",
       "2a314f5ea00a",
-      "96aba66a1117",
-      "21e5777b0873"
+      "21e5777b0873",
+      "914dca5e5f44"
     ]
   },
   "【D/A_7】204eaf863f95": {
     "current_status": "not_available",
     "notified_rooms": [
-      "750930ada0c1",
       "e22a4358229d",
+      "87bf56ba2fa8",
       "5a0e8dfc704d",
-      "fa910c30393b",
       "b83111cd022a",
       "9080e58fa594",
-      "87bf56ba2fa8"
+      "fa910c30393b",
+      "750930ada0c1"
     ]
   },
   "【D/C_8】a74ff8d8818d": {
     "current_status": "not_available",
     "notified_rooms": [
       "82275a38ed2e",
-      "b1d3e9c32266",
-      "90c7295ab549"
+      "90c7295ab549",
+      "b1d3e9c32266"
     ]
   },
   "【D/C_9】b535a6a990cc": {
@@ -78,25 +78,25 @@
   "【S/A_11】8302ecb1c93f": {
     "current_status": "available",
     "notified_rooms": [
-      "e34fd46b681e",
-      "43d093ad6d9f",
-      "3ff588100434",
-      "905a15180161",
-      "0e0e369aece2",
-      "37fabef48cf8",
-      "b04347e02824",
-      "d317e449a122",
-      "576aa9c79fe3",
-      "477b91f07ec5",
-      "a0ee7d3d6309",
-      "0b3777195319",
-      "2e47d0426f9e",
-      "83537bdcdb62",
       "f4a70333dda3",
-      "c10a6b2966ac",
-      "0a674d75d7d7",
+      "e34fd46b681e",
+      "576aa9c79fe3",
+      "83537bdcdb62",
+      "0e0e369aece2",
+      "cf937451447f",
       "d86cd24660c0",
-      "cf937451447f"
+      "0b3777195319",
+      "b04347e02824",
+      "0a674d75d7d7",
+      "d317e449a122",
+      "a0ee7d3d6309",
+      "37fabef48cf8",
+      "905a15180161",
+      "477b91f07ec5",
+      "43d093ad6d9f",
+      "2e47d0426f9e",
+      "3ff588100434",
+      "c10a6b2966ac"
     ]
   }
 }
