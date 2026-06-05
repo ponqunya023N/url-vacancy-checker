@@ -14,53 +14,53 @@
   "【A/B_3】3c855f785096": {
     "current_status": "not_available",
     "notified_rooms": [
-      "376974310784",
-      "eac33de56216"
+      "eac33de56216",
+      "376974310784"
     ]
   },
   "【A/C_4】db710691f15c": {
     "current_status": "not_available",
     "notified_rooms": [
-      "8918982add5b",
-      "9eaf6a0578c9"
+      "9eaf6a0578c9",
+      "8918982add5b"
     ]
   },
   "【B/B_5】782e70c84bcf": {
     "current_status": "not_available",
     "notified_rooms": [
-      "511734ad35d3",
       "781c5194196c",
       "9dad815a8074",
-      "402f1eca815d"
+      "402f1eca815d",
+      "511734ad35d3"
     ]
   },
   "【C/B_6】732db75e4400": {
     "current_status": "not_available",
     "notified_rooms": [
-      "f95c5cd61c3c",
       "2a314f5ea00a",
-      "21e5777b0873",
+      "f95c5cd61c3c",
       "96aba66a1117",
-      "914dca5e5f44"
+      "914dca5e5f44",
+      "21e5777b0873"
     ]
   },
   "【D/A_7】204eaf863f95": {
     "current_status": "not_available",
     "notified_rooms": [
-      "b83111cd022a",
-      "5a0e8dfc704d",
-      "fa910c30393b",
-      "9080e58fa594",
-      "87bf56ba2fa8",
       "e22a4358229d",
-      "750930ada0c1"
+      "87bf56ba2fa8",
+      "b83111cd022a",
+      "750930ada0c1",
+      "5a0e8dfc704d",
+      "9080e58fa594",
+      "fa910c30393b"
     ]
   },
   "【D/C_8】a74ff8d8818d": {
     "current_status": "not_available",
     "notified_rooms": [
-      "90c7295ab549",
       "b1d3e9c32266",
+      "90c7295ab549",
       "82275a38ed2e"
     ]
   },
@@ -78,26 +78,26 @@
   "【S/A_11】8302ecb1c93f": {
     "current_status": "available",
     "notified_rooms": [
-      "37fabef48cf8",
-      "d184d3091327",
-      "83537bdcdb62",
-      "0e0e369aece2",
-      "b04347e02824",
-      "c10a6b2966ac",
-      "a0ee7d3d6309",
-      "0b3777195319",
-      "576aa9c79fe3",
+      "0a674d75d7d7",
       "43d093ad6d9f",
-      "3ff588100434",
-      "905a15180161",
-      "2e47d0426f9e",
       "477b91f07ec5",
-      "e34fd46b681e",
-      "f4a70333dda3",
+      "37fabef48cf8",
       "d317e449a122",
+      "576aa9c79fe3",
+      "e34fd46b681e",
       "d86cd24660c0",
+      "0b3777195319",
+      "c10a6b2966ac",
       "cf937451447f",
-      "0a674d75d7d7"
+      "0e0e369aece2",
+      "3ff588100434",
+      "b04347e02824",
+      "2e47d0426f9e",
+      "a0ee7d3d6309",
+      "83537bdcdb62",
+      "d184d3091327",
+      "f4a70333dda3",
+      "905a15180161"
     ]
   }
 }
