@@ -2,8 +2,8 @@
   "【S/A_1】bb082df7ea06": {
     "current_status": "not_available",
     "notified_rooms": [
-      "26a00f435b00",
-      "6ff5a380f07c"
+      "6ff5a380f07c",
+      "26a00f435b00"
     ]
   },
   "【A/A_2】d5eedf6bb88e": {
@@ -16,9 +16,9 @@
   "【A/B_3】3c855f785096": {
     "current_status": "not_available",
     "notified_rooms": [
-      "4200c96bd3a9",
       "376974310784",
-      "eac33de56216"
+      "eac33de56216",
+      "4200c96bd3a9"
     ]
   },
   "【A/C_4】db710691f15c": {
@@ -41,24 +41,24 @@
   "【C/B_6】732db75e4400": {
     "current_status": "available",
     "notified_rooms": [
-      "f95c5cd61c3c",
+      "914dca5e5f44",
       "585eb0e5d69a",
-      "21e5777b0873",
       "2a314f5ea00a",
+      "f95c5cd61c3c",
       "96aba66a1117",
-      "914dca5e5f44"
+      "21e5777b0873"
     ]
   },
   "【D/A_7】204eaf863f95": {
     "current_status": "not_available",
     "notified_rooms": [
-      "87bf56ba2fa8",
-      "fa910c30393b",
       "750930ada0c1",
-      "e22a4358229d",
+      "b83111cd022a",
       "9080e58fa594",
+      "87bf56ba2fa8",
+      "e22a4358229d",
       "5a0e8dfc704d",
-      "b83111cd022a"
+      "fa910c30393b"
     ]
   },
   "【D/C_8】a74ff8d8818d": {
@@ -72,8 +72,8 @@
   "【D/C_9】b535a6a990cc": {
     "current_status": "not_available",
     "notified_rooms": [
-      "174f77b738c0",
-      "39b836c9c9ed"
+      "39b836c9c9ed",
+      "174f77b738c0"
     ]
   },
   "【S/A_10】dd714672906b": {
@@ -83,26 +83,26 @@
   "【S/A_11】8302ecb1c93f": {
     "current_status": "available",
     "notified_rooms": [
-      "2e47d0426f9e",
-      "83537bdcdb62",
-      "576aa9c79fe3",
-      "d184d3091327",
+      "cf937451447f",
+      "37fabef48cf8",
       "e34fd46b681e",
-      "905a15180161",
-      "477b91f07ec5",
+      "d86cd24660c0",
       "c10a6b2966ac",
       "43d093ad6d9f",
-      "37fabef48cf8",
+      "905a15180161",
       "f4a70333dda3",
-      "0b3777195319",
-      "cf937451447f",
-      "d86cd24660c0",
-      "b04347e02824",
-      "a0ee7d3d6309",
-      "3ff588100434",
-      "d317e449a122",
       "0a674d75d7d7",
-      "0e0e369aece2"
+      "0b3777195319",
+      "d184d3091327",
+      "d317e449a122",
+      "3ff588100434",
+      "2e47d0426f9e",
+      "a0ee7d3d6309",
+      "83537bdcdb62",
+      "0e0e369aece2",
+      "576aa9c79fe3",
+      "b04347e02824",
+      "477b91f07ec5"
     ]
   }
 }
