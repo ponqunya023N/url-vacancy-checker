@@ -16,10 +16,10 @@
   "【A/B_3】3c855f785096": {
     "current_status": "not_available",
     "notified_rooms": [
-      "eac33de56216",
-      "376974310784",
       "4200c96bd3a9",
-      "805990645f63"
+      "eac33de56216",
+      "805990645f63",
+      "376974310784"
     ]
   },
   "【A/C_4】db710691f15c": {
@@ -32,26 +32,26 @@
   "【B/B_5】782e70c84bcf": {
     "current_status": "not_available",
     "notified_rooms": [
-      "511734ad35d3",
-      "642bc13ab1f6",
-      "c44559ced36b",
-      "9dad815a8074",
       "781c5194196c",
-      "402f1eca815d"
+      "402f1eca815d",
+      "c44559ced36b",
+      "642bc13ab1f6",
+      "511734ad35d3",
+      "9dad815a8074"
     ]
   },
   "【C/B_6】732db75e4400": {
     "current_status": "available",
     "notified_rooms": [
-      "f95c5cd61c3c",
-      "21e5777b0873",
-      "96aba66a1117",
-      "98b9549a147d",
       "585eb0e5d69a",
-      "2a314f5ea00a",
-      "914dca5e5f44",
       "b16be2f374e5",
-      "473bbafea0f5"
+      "2a314f5ea00a",
+      "96aba66a1117",
+      "914dca5e5f44",
+      "98b9549a147d",
+      "473bbafea0f5",
+      "21e5777b0873",
+      "f95c5cd61c3c"
     ]
   },
   "【D/A_7】204eaf863f95": {
@@ -69,19 +69,19 @@
   "【D/C_8】a74ff8d8818d": {
     "current_status": "not_available",
     "notified_rooms": [
-      "b1d3e9c32266",
-      "82275a38ed2e",
       "db65f681b068",
-      "90c7295ab549"
+      "b1d3e9c32266",
+      "90c7295ab549",
+      "82275a38ed2e"
     ]
   },
   "【D/C_9】b535a6a990cc": {
     "current_status": "available",
     "notified_rooms": [
-      "174f77b738c0",
       "cfddd294a9c3",
-      "39b836c9c9ed",
-      "30fafdc7281b"
+      "30fafdc7281b",
+      "174f77b738c0",
+      "39b836c9c9ed"
     ]
   },
   "【S/A_10】dd714672906b": {
@@ -91,30 +91,30 @@
   "【S/A_11】8302ecb1c93f": {
     "current_status": "available",
     "notified_rooms": [
-      "477b91f07ec5",
-      "330ed938ad0f",
-      "37fabef48cf8",
-      "0e0e369aece2",
-      "905a15180161",
-      "83537bdcdb62",
       "43d093ad6d9f",
-      "dd51c90082ed",
-      "f4a70333dda3",
-      "576aa9c79fe3",
-      "d317e449a122",
-      "11cc9ce332c5",
-      "b04347e02824",
-      "a0ee7d3d6309",
       "3ff588100434",
-      "14f31e49fb50",
-      "0a674d75d7d7",
-      "d86cd24660c0",
-      "e34fd46b681e",
-      "0b3777195319",
       "cf937451447f",
       "2e47d0426f9e",
+      "0b3777195319",
+      "d184d3091327",
+      "f4a70333dda3",
+      "0a674d75d7d7",
+      "d317e449a122",
+      "b04347e02824",
+      "0e0e369aece2",
+      "dd51c90082ed",
+      "a0ee7d3d6309",
+      "576aa9c79fe3",
+      "11cc9ce332c5",
+      "14f31e49fb50",
+      "e34fd46b681e",
+      "37fabef48cf8",
+      "477b91f07ec5",
+      "330ed938ad0f",
       "c10a6b2966ac",
-      "d184d3091327"
+      "905a15180161",
+      "83537bdcdb62",
+      "d86cd24660c0"
     ]
   }
 }
